@@ -150,10 +150,31 @@
   .help-topic-body.open { display: block; }
   .help-topic-chevron { font-size: 12px; color: #aaa; transition: transform 0.2s; }
   .help-topic-chevron.open { transform: rotate(180deg); }
+  /* ── PASSWORD GATE ── */
+  .pw-gate { position:fixed; inset:0; background:#f5f5f3; display:flex; align-items:center; justify-content:center; z-index:9999; }
+  .pw-box { background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:2rem; width:100%; max-width:340px; text-align:center; }
+  .pw-box h2 { font-size:16px; font-weight:500; margin-bottom:4px; color:#1a1a1a; }
+  .pw-box p { font-size:13px; color:#888; margin-bottom:1.25rem; }
+  .pw-box input { width:100%; font-family:inherit; font-size:14px; padding:8px 10px; border:1px solid #ddd; border-radius:8px; outline:none; margin-bottom:10px; box-sizing:border-box; text-align:center; letter-spacing:0.05em; }
+  .pw-box input:focus { border-color:#888; }
+  .pw-box input.error { border-color:#E24B4A; }
+  .pw-error { font-size:12px; color:#E24B4A; margin-bottom:10px; display:none; }
+  .pw-box button { width:100%; background:#1a1a1a; color:#fff; border:none; border-radius:8px; padding:9px; font-size:13px; font-family:inherit; cursor:pointer; }
+  .pw-box button:hover { background:#333; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
+<div class="pw-gate" id="pw-gate">
+  <div class="pw-box">
+    <h2>Project Intake Scorecard</h2>
+    <p>Enter your password to continue.</p>
+    <input type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPW()">
+    <div class="pw-error" id="pw-error">Incorrect password. Please try again.</div>
+    <button onclick="checkPW()">Continue</button>
+  </div>
+</div>
+
 <div class="app">
   <div style="display:flex;align-items:baseline;gap:10px;">
     <h1 style="font-size:22px;font-weight:500;">Project intake scorecard</h1>
@@ -2487,6 +2508,7 @@ function exportSalesForm() {
     <div class="modal">
       <h2>Export sales form</h2>
       <p>EmailJS credentials are pulled from the <strong>Settings</strong> tab. You can update them there at any time.</p>
+      <div style="background:#f5f5f3;border-radius:8px;padding:10px 14px;margin-bottom:0.5rem;font-size:12px;color:#888;"><strong style="color:#1a1a1a;">To publish:</strong> Upload the downloaded <code>index.html</code> to the <code>intake</code> folder in your GitHub repo. It will be live at <a href="https://nickporterfieldfullsteam.github.io/product-intake-scorecard/intake" target="_blank" style="color:#185FA5;">nickporterfieldfullsteam.github.io/product-intake-scorecard/intake</a></div>
       <div class="field"><label style="font-size:13px;">Your email <span style="font-weight:400;color:#888;">(where submission alerts go)</span></label><input type="text" id="ejs-email" placeholder="e.g. you@company.com" value="${saved?.toEmail||''}"></div>
       <div class="field"><label style="font-size:13px;">CC <span style="font-weight:400;color:#888;">(optional — comma-separated)</span></label><input type="text" id="ejs-cc" placeholder="e.g. colleague@company.com" value="${saved?.ccEmail||''}"></div>
       <div class="modal-btns">
@@ -2670,8 +2692,9 @@ function doExportSalesForm() {
         </div>
       </div>
     </div>
-    <div class="conf-btn-row">
+    <div class="conf-btn-row" style="flex-direction:column;align-items:center;gap:10px;">
       <button class="btn-primary-lg" onclick="resetToForm()">Submit another request</button>
+      <p style="font-size:12px;color:#aaa;margin:0;">Need to submit again later? Visit <a href="https://nickporterfieldfullsteam.github.io/product-intake-scorecard/intake" style="color:#185FA5;">nickporterfieldfullsteam.github.io/product-intake-scorecard/intake</a></p>
     </div>
   </div>
 </div>
@@ -3102,7 +3125,7 @@ buildProjectTypeSelect();
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'scorecard_sales.html';
+  a.href = url; a.download = 'index.html';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('Sales form exported!');
@@ -3399,6 +3422,40 @@ if (!localStorage.getItem('pm_emailjs')) {
     toEmail:            'nick.porterfield@fullsteam.com',
     ccEmail:            ''
   }));
+}
+
+
+/* ── PASSWORD GATE ── */
+const PW_HASH = '3e1781f56dcea4f0ca8939357e91422cf1e64c5a8cca1731c2f13ba1457be744';
+
+async function hashInput(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPW() {
+  const val = document.getElementById('pw-input').value;
+  const hash = await hashInput(val);
+  if (hash === PW_HASH) {
+    sessionStorage.setItem('pm_auth', '1');
+    document.getElementById('pw-gate').style.display = 'none';
+  } else {
+    const input = document.getElementById('pw-input');
+    const err = document.getElementById('pw-error');
+    input.classList.add('error');
+    err.style.display = 'block';
+    input.value = '';
+    setTimeout(() => { input.classList.remove('error'); err.style.display = 'none'; }, 3000);
+  }
+}
+
+// Check session on load
+if (sessionStorage.getItem('pm_auth') === '1') {
+  const gate = document.getElementById('pw-gate');
+  if (gate) gate.style.display = 'none';
+} else {
+  // Focus password input
+  setTimeout(() => { const el = document.getElementById('pw-input'); if (el) el.focus(); }, 50);
 }
 
 /* ── HELP TOPICS ── */

@@ -162,7 +162,8 @@
   .metric-card.alert .metric-value { color:#501313; }
   .metric-card.warn .metric-value { color:#633806; }
   .metric-sub { font-size:11px; color:#aaa; margin-top:2px; }
-  .charts-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:1.25rem; }
+  .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:1.25rem; }
+  .chart-canvas-wrap { position:relative; height:200px; margin-top:10px; }
   .chart-card { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:14px 16px; }
   .chart-title { font-size:11px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px; }
   .chart-empty { font-size:12px; color:#ccc; text-align:center; padding:20px 0; }
@@ -178,6 +179,7 @@
 
   /* ── LIST FILTERS ── */
   #list-filter-bar select { cursor:pointer; }
+  #project-search { width:100% !important; }
   #list-filter-bar select:focus { outline:none; border-color:#888; }
 
   /* ── SUBMITTERS ── */
@@ -233,6 +235,8 @@
   .pw-box button:hover { background:#333; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="pw-gate" id="pw-gate">
@@ -258,6 +262,7 @@
   <div class="tabs" id="main-tabs">
     <button class="tab" onclick="showTab('tracker')" id="tab-btn-tracker">Dashboard</button>
     <button class="tab" onclick="showTab('submitters')" id="tab-btn-submitters">Submitters</button>
+    <button class="tab" onclick="showTab('insights')" id="tab-btn-insights">Insights</button>
     <button class="tab" onclick="showTab('help')" id="tab-btn-help">Help</button>
   </div>
 
@@ -312,7 +317,6 @@
     <div class="btn-row">
       <button class="btn-primary-lg" onclick="saveProject()">Save project</button>
       <button class="btn-secondary-lg" onclick="clearForm()">Clear form</button>
-      <button class="btn-secondary-lg" onclick="exportCSV()">Export all as CSV</button>
     </div>
   </div>
 
@@ -320,9 +324,13 @@
   <div id="tab-tracker" class="tab-panel active">
     <div id="summary-metrics"></div>
     <div class="section">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-        <div class="section-title" style="margin-bottom:0;">Saved projects</div>
-        <div class="view-toggle">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:10px;">
+        <div class="section-title" style="margin-bottom:0;flex-shrink:0;">Saved projects</div>
+        <div style="flex:1;max-width:280px;position:relative;">
+          <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:13px;color:#bbb;pointer-events:none;">&#x2315;</span>
+          <input type="text" id="project-search" placeholder="Search projects or customers…" style="width:100%;font-size:12px;padding:5px 10px 5px 26px;border:1px solid #e5e5e5;border-radius:8px;font-family:inherit;" oninput="applyListFilters()">
+        </div>
+        <div class="view-toggle" style="flex-shrink:0;">
           <button class="view-toggle-btn active" id="view-btn-list" onclick="setTrackerView('list')">&#9776; List</button>
           <button class="view-toggle-btn" id="view-btn-board" onclick="setTrackerView('board')">&#9632;&#9632; Board</button>
         </div>
@@ -357,6 +365,46 @@
   <!-- SUBMITTERS -->
   <div id="tab-submitters" class="tab-panel">
     <div id="submitters-content"></div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div id="tab-insights" class="tab-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div>
+        <div class="section-title" style="margin-bottom:2px;">Insights</div>
+        <p style="font-size:13px;color:#888;margin:0;">Trends and analytics across all saved projects.</p>
+      </div>
+      <button class="btn-secondary" onclick="exportToExcel()" style="display:flex;align-items:center;gap:6px;"><span style="font-size:14px;">&#x2193;</span> Export report</button>
+    </div>
+    <!-- Insights filter bar — always in DOM, populated by JS -->
+    <div id="insights-filter-bar" style="display:flex;align-items:center;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <style>#insights-filter-bar select, #insights-filter-bar input[type=date] { width:auto; font-size:12px; padding:3px 7px; border:1px solid #e5e5e5; border-radius:6px; }</style>
+      <select id="if-preset" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#555;" onchange="applyInsightsFilters()">
+        <option value="all">All time</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="180">Last 6 months</option>
+        <option value="365">Last 12 months</option>
+        <option value="custom">Custom range</option>
+      </select>
+      <div id="if-custom-row" style="display:none;align-items:center;gap:6px;">
+        <input type="date" id="if-from" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;font-family:inherit;" onchange="applyInsightsFilters()">
+        <span style="font-size:12px;color:#888;">to</span>
+        <input type="date" id="if-to" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;font-family:inherit;" onchange="applyInsightsFilters()">
+      </div>
+      <div style="width:1px;height:18px;background:#e5e5e5;flex-shrink:0;"></div>
+      <select id="if-type" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#555;" onchange="applyInsightsFilters()">
+        <option value="">All types</option>
+      </select>
+      <select id="if-rep" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#555;" onchange="applyInsightsFilters()">
+        <option value="">All reps</option>
+      </select>
+      <select id="if-status" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#555;" onchange="applyInsightsFilters()">
+        <option value="">All statuses</option>
+      </select>
+      <button id="if-clear" onclick="clearInsightsFilters()" style="display:none;font-family:inherit;font-size:11px;padding:2px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#aaa;cursor:pointer;">&#x2715;</button>
+    </div>
+    <div id="insights-content"></div>
   </div>
 
   <!-- WEIGHTS -->
@@ -595,8 +643,9 @@
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">Every project moves through: <strong>Submitted → Under Review → Accepted / Deferred / Passed</strong>.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
+            <p style="margin:0 0 8px;">Every project moves through: <strong>Submitted → Under Review → Accepted → Completed / Deferred / Passed</strong>.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
             <li style="margin-bottom:4px;">Change status from the expanded row or by dragging cards on the board — updates instantly</li>
+            <li style="margin-bottom:4px;">Once accepted and shipped to Jira, mark as <strong>Completed</strong> to close the loop — Completed counts toward decided metrics and appears in the Insights charts</li>
             <li style="margin-bottom:4px;">For deferred projects, set a revisit date; the Summary metrics card turns red/amber when overdue or due within 7 days — click it to jump straight to those projects</li>
             <li style="margin-bottom:4px;">Click <strong>Send decision email</strong> to open a modal with a live preview — adjust decision, notes, and revisit date before sending</li>
             <li style="margin-bottom:4px;">Use <strong>Edit &amp; re-score</strong> to update an existing project without losing its status or decision history</li>
@@ -660,10 +709,26 @@
             <p style="margin:0 0 8px;">The Dashboard has two views — List and Board — plus a summary metrics panel at the top.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
             <li style="margin-bottom:4px;">The <strong>Summary metrics</strong> panel shows total projects, submissions this month, average score, acceptance rate, and overdue revisits — click any card to filter the list</li>
             <li style="margin-bottom:4px;">Switch to <strong>Board view</strong> for a five-column kanban layout — drag cards between columns to update status instantly</li>
-            <li style="margin-bottom:4px;">Terminal columns (Accepted, Deferred, Passed) collapse by default to keep focus on active work — click the column header to expand or collapse</li>
+            <li style="margin-bottom:4px;">Terminal columns (Accepted, Completed, Deferred, Passed) collapse by default to keep focus on active work — click the column header to expand or collapse</li>
             <li style="margin-bottom:4px;">Sort board cards by score or date using the toolbar above the board</li>
             <li style="margin-bottom:4px;">Filter board cards by project type using the type buttons in the toolbar</li>
             <li style="margin-bottom:4px;">Overdue deferred projects are highlighted with a red left border accent in both list and board views</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="help-topic">
+          <div class="help-topic-header" onclick="toggleHelp(this)">
+            <span class="help-topic-title">Insights tab</span>
+            <span class="help-topic-chevron">▾</span>
+          </div>
+          <div class="help-topic-body">
+            <p style="margin:0 0 8px;">The Insights tab shows charts and tables built from your project data, with filters to scope everything to a specific time range, type, rep, or status.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
+            <li style="margin-bottom:4px;">Six charts: submissions over time, pipeline by status, score distribution, avg score by rep, acceptance rate by type, and avg time to decision</li>
+            <li style="margin-bottom:4px;">Criteria scoring breakdown table — avg score per criterion across all projects, sorted highest to lowest. Useful for spotting where requests consistently score weak</li>
+            <li style="margin-bottom:4px;">Top customers table — submission volume, avg score, and acceptance rate per account</li>
+            <li style="margin-bottom:4px;">Filter bar at the top scopes all charts and tables simultaneously — use presets (last 30/90 days, etc.) or set a custom date range</li>
+            <li style="margin-bottom:4px;">Click <strong>Export report</strong> to generate a shareable HTML report that opens in a new tab and can be printed to PDF</li>
             </ul>
           </div>
         </div>
@@ -706,7 +771,7 @@
         <div class="help-topic">
           <div class="help-topic-header" onclick="toggleHelp(this)">
             <span class="help-topic-title">QA checklist</span>
-            <span style="font-size:12px;color:#888;margin-right:8px;" id="qa-progress-label">0 / 117 complete</span>
+            <span style="font-size:12px;color:#888;margin-right:8px;" id="qa-progress-label">0 / 136 complete</span>
             <span class="help-topic-chevron">&#9662;</span>
           </div>
           <div class="help-topic-body">
@@ -1191,6 +1256,91 @@
               </label>
             </div>
             <div style="margin-bottom:1rem;">
+              <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Insights tab</p>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-9-0" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Filter bar renders on one row with all dropdowns inline
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-9-1" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Preset date filters correctly scope all charts and tables
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-9-2" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Custom date range — From/To pickers appear only when Custom is selected
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-9-3" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Type, rep, and status filters all work correctly
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-9-4" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Clear ✕ button appears when a filter is active and resets everything
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-9-5" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Criteria scoring breakdown shows all criteria sorted by avg score
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-9-6" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Top customers table shows correct submission count and acceptance rate
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-9-7" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Export report opens in new tab (or downloads as HTML if pop-up blocked)
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-9-8" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Report includes overdue callout only when overdue projects exist
+              </label>
+            </div>
+            <div style="margin-bottom:1rem;">
+              <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Completed status</p>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-10-0" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Completed appears as a status option in the expanded project row
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-10-1" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Completed column appears in the kanban board
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-10-2" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Completed counts toward decided/acceptance rate metrics
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-10-3" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Completed appears in pipeline donut and submissions chart
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-10-4" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Sample data includes Completed projects
+              </label>
+            </div>
+            <div style="margin-bottom:1rem;">
+              <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Search</p>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-0" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Search bar filters by project name in real time
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-1" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Search bar filters by customer name
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-2" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Search bar filters by rep name
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-3" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Search combines correctly with status pills and filter dropdowns
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-4" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Clear filters button resets search along with other filters
+              </label>
+            </div>
+            <div style="margin-bottom:1rem;">
               <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Cross-browser / compatibility</p>
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
                 <input type="checkbox" id="qa-8-0" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
@@ -1285,7 +1435,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 
 function uid() { return 'c' + Math.random().toString(36).slice(2,9); }
 
@@ -1293,10 +1443,11 @@ const STATUS_CONFIG = {
   'Submitted':    { cls: 'status-submitted',   color: '#185FA5', bg: '#E6F1FB' },
   'Under Review': { cls: 'status-review',      color: '#854F0B', bg: '#FAEEDA' },
   'Accepted':     { cls: 'status-accepted',    color: '#27500A', bg: '#EAF3DE' },
+  'Completed':    { cls: 'status-completed',   color: '#0C447C', bg: '#B5D4F4' },
   'Deferred':     { cls: 'status-deferred',    color: '#633806', bg: '#FAEEDA' },
   'Passed':       { cls: 'status-passed',      color: '#501313', bg: '#FCEBEB' },
 };
-const STATUS_ORDER = ['Submitted', 'Under Review', 'Accepted', 'Deferred', 'Passed'];
+const STATUS_ORDER = ['Submitted', 'Under Review', 'Accepted', 'Completed', 'Deferred', 'Passed'];
 function statusRank(s) { return STATUS_ORDER.indexOf(s || 'Submitted'); }
 document.addEventListener('DOMContentLoaded', () => {
   const vb = document.getElementById('version-badge');
@@ -1703,9 +1854,18 @@ function saveProject() {
   const projectTypeId = ptEl ? ptEl.value : '';
   const ptMapping = projectTypeMappings.find(x => x.id === projectTypeId);
   const projectTypeLabel = ptMapping ? ptMapping.label : '';
+  // Snapshot criteria at save time so old scores stay readable if criteria change later
+  const totalWeightNow = criteria.reduce((s,c) => s + getWeight(c.id), 0);
+  const criteriaSnapshot = getActiveCriteria().map(c => {
+    const score10 = vals[c.id] !== null && vals[c.id] !== undefined ? Number(vals[c.id]) : null;
+    const opt = score10 !== null ? c.options.find(o => Number(o.score) === score10) : null;
+    const pct = totalWeightNow > 0 ? Math.round((getWeight(c.id) / totalWeightNow) * 100) : 0;
+    return { id: c.id, label: c.label, optionLabel: opt ? opt.label : '', score: score10, weightPct: pct };
+  });
+
   const proj = {
     id: Date.now(), name, detailVals, lockedVals,
-    criteriaVals: vals, score, tier: tier.label,
+    criteriaVals: vals, criteriaSnapshot, score, tier: tier.label,
     partial: false, status: 'Submitted',
     decisionNotes: '', revisitDate: '',
     date: new Date().toLocaleDateString(),
@@ -1799,7 +1959,7 @@ function filterToDecided() {
   buildStatusFilterBar();
   const container = document.getElementById('projects-list');
   const filtered = projects
-    .filter(p => ['Accepted','Deferred','Passed'].includes(p.status))
+    .filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status))
     .sort((a, b) => statusRank(a.status) - statusRank(b.status) || b.score - a.score);
   if (!filtered.length) { container.innerHTML = '<div class="empty-state">No decided projects yet.</div>'; return; }
   container.innerHTML = '';
@@ -1816,8 +1976,8 @@ function filterToDecided() {
 let trackerView = 'list';
 let kanbanSort = localStorage.getItem('pm_kanban_sort') || 'score';
 let kanbanTypeFilter = 'All';
-const TERMINAL_STATUSES = ['Accepted', 'Deferred', 'Passed'];
-let collapsedCols = JSON.parse(localStorage.getItem('pm_collapsed_cols') || '["Accepted","Deferred","Passed"]');
+const TERMINAL_STATUSES = ['Accepted', 'Completed', 'Deferred', 'Passed'];
+let collapsedCols = JSON.parse(localStorage.getItem('pm_collapsed_cols') || '["Accepted","Completed","Deferred","Passed"]');
 
 function setKanbanSort(sort) {
   kanbanSort = sort;
@@ -2032,30 +2192,7 @@ function openKanbanCard(id) {
     return `<div style="padding:6px 0;border-bottom:1px solid #f0f0ee;"><div style="font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">${f.label}</div><div style="font-size:13px;color:#1a1a1a;">${val}</div></div>`;
   }).filter(Boolean).join('');
 
-  const totalWeight = criteria.reduce((s, c) => s + getWeight(c.id), 0);
-  const savedKeys = p.criteriaVals ? Object.keys(p.criteriaVals) : [];
-  const criteriaRows = criteria.map((c, ci) => {
-    if (!p.criteriaVals) return '';
-    let val = p.criteriaVals[c.id];
-    if (val === null || val === undefined) {
-      if (savedKeys[ci] !== undefined) val = p.criteriaVals[savedKeys[ci]];
-    }
-    if (val === null || val === undefined) return '';
-    const numVal = Number(val);
-    if (isNaN(numVal)) return '';
-    const opt = c.options.find(o => Number(o.score) === numVal);
-    const pct = totalWeight > 0 ? Math.round((getWeight(c.id) / totalWeight) * 100) : 0;
-    return `<div style="padding:6px 0;border-bottom:1px solid #f0f0ee;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-      <div style="flex:1;">
-        <div style="font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">${c.label} <span style="font-weight:400;text-transform:none;">(${pct}%)</span></div>
-        <div style="font-size:13px;color:#1a1a1a;">${opt ? opt.label : numVal}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0;">
-        <div style="font-size:11px;color:#888;margin-bottom:2px;">Score</div>
-        <div style="font-size:13px;font-weight:500;color:#1a1a1a;">${numVal}/10</div>
-      </div>
-    </div>`;
-  }).filter(Boolean).join('');
+  const criteriaRows = buildCriteriaRows(p);
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -2147,7 +2284,7 @@ function renderSummaryMetrics() {
     const d = new Date(p.date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
   }).length;
   const avgScore = total ? Math.round(projects.reduce((s,p) => s + (p.score||0), 0) / total) : 0;
-  const decided = projects.filter(p => ['Accepted','Deferred','Passed'].includes(p.status));
+  const decided = projects.filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status));
   const accepted = projects.filter(p => p.status === 'Accepted').length;
   const acceptRate = decided.length ? Math.round((accepted / decided.length) * 100) : null;
 
@@ -2190,62 +2327,302 @@ function renderSummaryMetrics() {
     ${overdueCard}
   </div>`;
 
-  // Pipeline donut (SVG)
-  const statusCounts = STATUS_ORDER.map(s => ({ s, count: projects.filter(p => (p.status||'Submitted') === s).length }));
-  const statusColors = { 'Submitted':'#185FA5','Under Review':'#BA7517','Accepted':'#3B6D11','Deferred':'#633806','Passed':'#a32d2d' };
-  let donutSvg = '';
-  const r = 36, cx = 44, cy = 44, circ = 2 * Math.PI * r;
-  let offset = 0;
-  const nonZero = statusCounts.filter(x => x.count > 0);
-  const donutPaths = nonZero.map(({s, count}) => {
-    const pct = count / total;
-    const dash = pct * circ;
-    const gap = circ - dash;
-    const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${statusColors[s]}" stroke-width="14" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
-    offset += dash;
-    return seg;
-  }).join('');
-  donutSvg = `<svg width="88" height="88" viewBox="0 0 88 88"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f0f0ee" stroke-width="14"/>${donutPaths}</svg>`;
-  const legendHtml = nonZero.map(({s,count}) => `<div class="legend-row"><div class="legend-dot" style="background:${statusColors[s]};"></div>${s} <span style="margin-left:auto;font-weight:500;">${count}</span></div>`).join('');
-  const pipelineChart = `<div class="chart-card"><div class="chart-title">Pipeline</div><div class="donut-wrap">${donutSvg}<div class="donut-legend">${legendHtml}</div></div></div>`;
+  // ── Compute chart data (also used for Excel export later)
+  const statusColors = { 'Submitted':'#185FA5','Under Review':'#BA7517','Accepted':'#3B6D11','Completed':'#0C447C','Deferred':'#633806','Passed':'#a32d2d' };
 
-  // Score distribution bar chart
-  const tiers = [
-    { label: 'Pursue', min: 75, color: '#3B6D11' },
-    { label: 'Evaluate', min: 55, color: '#BA7517' },
-    { label: 'Defer', min: 35, color: '#C06000' },
-    { label: 'Pass', min: 0, color: '#a32d2d' },
-  ];
-  const tierCounts = tiers.map(t => {
-    const next = tiers[tiers.indexOf(t)-1];
-    const max = next ? next.min : 101;
-    return { ...t, count: projects.filter(p => p.score >= t.min && p.score < max).length };
-  });
-  const maxTier = Math.max(...tierCounts.map(t => t.count), 1);
-  const scoreChart = `<div class="chart-card"><div class="chart-title">Score distribution</div>${
-    tierCounts.map(t => `<div class="bar-row"><div class="bar-label">${t.label}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round((t.count/maxTier)*100)}%;background:${t.color};"></div></div><div class="bar-count">${t.count}</div></div>`).join('')
-  }</div>`;
+  // Pipeline by status
+  const statusCounts = STATUS_ORDER.map(s => projects.filter(p => (p.status||'Submitted') === s).length);
 
-  // Submissions over time (last 6 months)
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
+  // Submissions + acceptances over last 12 months
+  const months12 = [];
+  for (let i = 11; i >= 0; i--) {
     const d = new Date(thisYear, thisMonth - i, 1);
-    months.push({ label: d.toLocaleString('default',{month:'short'}), month: d.getMonth(), year: d.getFullYear() });
+    months12.push({ label: d.toLocaleString('default',{month:'short'}), month: d.getMonth(), year: d.getFullYear() });
   }
-  const monthCounts = months.map(m => ({
-    ...m,
-    count: projects.filter(p => {
-      if (!p.date) return false;
-      const d = new Date(p.date);
-      return d.getMonth() === m.month && d.getFullYear() === m.year;
-    }).length
-  }));
-  const maxMonth = Math.max(...monthCounts.map(m => m.count), 1);
-  const timeChart = `<div class="chart-card"><div class="chart-title">Submissions (6 months)</div>${
-    monthCounts.map(m => `<div class="bar-row"><div class="bar-label">${m.label}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round((m.count/maxMonth)*100)}%;background:#185FA5;"></div></div><div class="bar-count">${m.count}</div></div>`).join('')
-  }</div>`;
+  const monthSubs = months12.map(m => projects.filter(p => { if (!p.date) return false; const d = new Date(p.date); return d.getMonth()===m.month && d.getFullYear()===m.year; }).length);
+  const monthAccepted = months12.map(m => projects.filter(p => { if (!p.date) return false; const d = new Date(p.date); return d.getMonth()===m.month && d.getFullYear()===m.year && p.status==='Accepted'; }).length);
 
-  container.innerHTML = statsHtml + `<div class="charts-row">${pipelineChart}${scoreChart}${timeChart}</div>`;
+  // Score distribution (buckets 0-9,10-19,...90-100)
+  const bucketLabels = ['0–9','10–19','20–29','30–39','40–49','50–59','60–69','70–79','80–89','90–100'];
+  const bucketCounts = bucketLabels.map((_, i) => projects.filter(p => p.score >= i*10 && p.score < (i===9?101:i*10+10)).length);
+  const bucketColors = bucketLabels.map((_, i) => i >= 8 ? '#3B6D11' : i >= 6 ? '#BA7517' : i >= 4 ? '#C06000' : '#a32d2d');
+
+  // Acceptance rate by project type
+  const typeNames = [...new Set(projects.map(p => p.projectType||'Unknown').filter(Boolean))];
+  const typeRates = typeNames.map(t => {
+    const typeProjs = projects.filter(p => (p.projectType||'Unknown') === t);
+    const typeDec = typeProjs.filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status));
+    const typeAcc = typeProjs.filter(p => p.status === 'Accepted').length;
+    return typeDec.length ? Math.round((typeAcc/typeDec.length)*100) : 0;
+  });
+
+  // Avg score by rep (top 6)
+  const repMap = {};
+  projects.forEach(p => {
+    const rep = (p.lockedVals&&p.lockedVals['__submitter__'])||'Unknown';
+    if (!repMap[rep]) repMap[rep] = [];
+    repMap[rep].push(p.score||0);
+  });
+  const repEntries = Object.entries(repMap).map(([name, scores]) => ({ name, avg: Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) })).sort((a,b)=>b.avg-a.avg).slice(0,6);
+
+  // Avg time to decision
+  const decidedProjs = projects.filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status) && p.date);
+  const avgDays = decidedProjs.length ? Math.round(decidedProjs.reduce((sum, p) => {
+    const submitted = new Date(p.date);
+    const now = new Date();
+    return sum + Math.max(0, Math.round((now - submitted) / (1000*60*60*24)));
+  }, 0) / decidedProjs.length) : null;
+
+  // ── Summary line for collapsed state
+  // ── Render — metrics only, charts live in Insights tab
+  container.innerHTML = statsHtml;
+}
+
+/* ── INSIGHTS TAB ── */
+let insightsFilters = { preset: 'all', dateFrom: '', dateTo: '', type: '', rep: '', status: '' };
+
+function clearInsightsFilters() {
+  insightsFilters = { preset:'all', dateFrom:'', dateTo:'', type:'', rep:'', status:'' };
+  ['if-preset','if-type','if-rep','if-status','if-from','if-to'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const el = document.getElementById('if-preset');
+  if (el) el.value = 'all';
+  const customRow = document.getElementById('if-custom-row');
+  if (customRow) customRow.style.display = 'none';
+  const clearBtn = document.getElementById('if-clear');
+  if (clearBtn) clearBtn.style.display = 'none';
+  renderInsights();
+}
+
+function applyInsightsFilters() {
+  insightsFilters.preset   = (document.getElementById('if-preset') ||{}).value || 'all';
+  insightsFilters.dateFrom = (document.getElementById('if-from')   ||{}).value || '';
+  insightsFilters.dateTo   = (document.getElementById('if-to')     ||{}).value || '';
+  insightsFilters.type     = (document.getElementById('if-type')   ||{}).value || '';
+  insightsFilters.rep      = (document.getElementById('if-rep')    ||{}).value || '';
+  insightsFilters.status   = (document.getElementById('if-status') ||{}).value || '';
+  // Show/hide custom date row
+  const customRow = document.getElementById('if-custom-row');
+  if (customRow) customRow.style.display = insightsFilters.preset === 'custom' ? 'flex' : 'none';
+  // Show/hide clear button
+  const hasFilter = insightsFilters.preset !== 'all' || insightsFilters.type || insightsFilters.rep || insightsFilters.status || insightsFilters.dateFrom || insightsFilters.dateTo;
+  const clearBtn = document.getElementById('if-clear');
+  if (clearBtn) clearBtn.style.display = hasFilter ? 'inline-block' : 'none';
+  renderInsights();
+}
+
+function getInsightsFilteredProjects() {
+  const today = new Date(); today.setHours(23,59,59,999);
+  let from = null, to = null;
+  if (insightsFilters.preset !== 'all' && insightsFilters.preset !== 'custom') {
+    const days = { '30':30,'90':90,'180':180,'365':365 }[insightsFilters.preset];
+    if (days) { from = new Date(); from.setDate(from.getDate()-days); from.setHours(0,0,0,0); }
+  } else if (insightsFilters.preset === 'custom') {
+    if (insightsFilters.dateFrom) { from = new Date(insightsFilters.dateFrom); from.setHours(0,0,0,0); }
+    if (insightsFilters.dateTo)   { to   = new Date(insightsFilters.dateTo);   to.setHours(23,59,59,999); }
+  }
+  return projects.filter(p => {
+    if (insightsFilters.type   && (p.projectType||'') !== insightsFilters.type) return false;
+    if (insightsFilters.rep    && ((p.lockedVals&&p.lockedVals['__submitter__'])||'') !== insightsFilters.rep) return false;
+    if (insightsFilters.status && (p.status||'Submitted') !== insightsFilters.status) return false;
+    if (from || to) {
+      const pd = new Date(p.date);
+      if (isNaN(pd)) return false;
+      if (from && pd < from) return false;
+      if (to   && pd > to)   return false;
+    }
+    return true;
+  });
+}
+
+
+function populateInsightsFilters() {
+  const typeEl = document.getElementById('if-type');
+  const repEl  = document.getElementById('if-rep');
+  if (typeEl) {
+    const types = [...new Set(projects.map(p=>p.projectType||'').filter(Boolean))];
+    typeEl.innerHTML = '<option value="">All types</option>' + types.map(t=>'<option value="'+t+'"'+(insightsFilters.type===t?' selected':'')+'>'+t+'</option>').join('');
+    if (types.length <= 1) typeEl.style.display = 'none'; else typeEl.style.display = '';
+  }
+  if (repEl) {
+    const reps = [...new Set(projects.map(p=>(p.lockedVals&&p.lockedVals['__submitter__'])||'').filter(Boolean))].sort();
+    repEl.innerHTML = '<option value="">All reps</option>' + reps.map(r=>'<option value="'+r+'"'+(insightsFilters.rep===r?' selected':'')+'>'+r+'</option>').join('');
+  }
+  // Restore preset
+  const presetEl = document.getElementById('if-preset');
+  if (presetEl) presetEl.value = insightsFilters.preset || 'all';
+  const statusEl = document.getElementById('if-status');
+  if (statusEl) {
+    statusEl.innerHTML = '<option value="">All statuses</option>' + STATUS_ORDER.map(s => '<option value="'+s+'"'+(insightsFilters.status===s?' selected':'')+'>'+s+'</option>').join('');
+  }
+}
+
+function renderInsights() {
+  const container = document.getElementById('insights-content');
+  if (!container) return;
+  if (!projects.length) { container.innerHTML = '<div class="empty-state">No projects yet. Insights will appear once you have some data.</div>'; return; }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const thisMonth = today.getMonth(); const thisYear = today.getFullYear();
+  const fp = getInsightsFilteredProjects(); // filtered project set
+  const total = fp.length;
+  if (!total) {
+    document.getElementById('insights-content').innerHTML = '<div class="empty-state" style="margin-top:1rem;">No projects match the current filters.</div>';
+    return;
+  }
+  const decided = fp.filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status));
+  const accepted = fp.filter(p => p.status === 'Accepted').length;
+  const acceptRate = decided.length ? Math.round((accepted / decided.length) * 100) : null;
+  const avgScore = total ? Math.round(fp.reduce((s,p) => s + (p.score||0), 0) / total) : 0;
+  const statusColors = { 'Submitted':'#185FA5','Under Review':'#BA7517','Accepted':'#3B6D11','Completed':'#0C447C','Deferred':'#633806','Passed':'#a32d2d' };
+
+  const months12 = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(thisYear, thisMonth - i, 1);
+    months12.push({ label: d.toLocaleString('default',{month:'short'}), month: d.getMonth(), year: d.getFullYear() });
+  }
+  const monthSubs = months12.map(m => fp.filter(p => { if (!p.date) return false; const d = new Date(p.date); return d.getMonth()===m.month && d.getFullYear()===m.year; }).length);
+  const monthAccepted = months12.map(m => fp.filter(p => { if (!p.date) return false; const d = new Date(p.date); return d.getMonth()===m.month && d.getFullYear()===m.year && p.status==='Accepted'; }).length);
+
+  const statusCounts = STATUS_ORDER.map(s => fp.filter(p => (p.status||'Submitted') === s).length);
+
+  const bucketLabels = ['0–9','10–19','20–29','30–39','40–49','50–59','60–69','70–79','80–89','90–100'];
+  const bucketCounts = bucketLabels.map((_, i) => fp.filter(p => p.score >= i*10 && p.score < (i===9?101:i*10+10)).length);
+  const bucketColors = bucketLabels.map((_, i) => i >= 8 ? '#3B6D11' : i >= 6 ? '#BA7517' : i >= 4 ? '#C06000' : '#a32d2d');
+
+  const typeNames = [...new Set(fp.map(p => p.projectType||'Unknown').filter(Boolean))];
+  const typeRates = typeNames.map(t => {
+    const tp = fp.filter(p => (p.projectType||'Unknown') === t);
+    const td = tp.filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status));
+    const ta = tp.filter(p => p.status === 'Accepted').length;
+    return td.length ? Math.round((ta/td.length)*100) : 0;
+  });
+
+  const repMap = {};
+  fp.forEach(p => { const rep = (p.lockedVals&&p.lockedVals['__submitter__'])||'Unknown'; if (!repMap[rep]) repMap[rep] = []; repMap[rep].push(p.score||0); });
+  const repEntries = Object.entries(repMap).map(([name, scores]) => ({ name, avg: Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) })).sort((a,b)=>b.avg-a.avg).slice(0,6);
+
+  const decidedProjs = fp.filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status) && p.date);
+  const avgDays = decidedProjs.length ? Math.round(decidedProjs.reduce((sum,p) => { const d = new Date(p.date); return sum + Math.max(0,Math.round((new Date()-d)/(1000*60*60*24))); }, 0) / decidedProjs.length) : null;
+
+  // ── Criteria breakdown
+  const criteriaStats = criteria.map(c => {
+    const scored = fp.filter(p => p.criteriaVals && p.criteriaVals[c.id] !== null && p.criteriaVals[c.id] !== undefined);
+    if (!scored.length) return null;
+    const avg = scored.reduce((s,p) => s + Number(p.criteriaVals[c.id]), 0) / scored.length;
+    return { label: c.label, avg: Math.round(avg * 10) / 10, pct: Math.round((avg/10)*100), n: scored.length,
+      color: avg >= 7 ? '#3B6D11' : avg >= 5 ? '#BA7517' : '#a32d2d' };
+  }).filter(Boolean).sort((a,b) => b.avg - a.avg);
+
+  // ── Top customers
+  const custMap = {};
+  fp.forEach(p => {
+    const c = (p.lockedVals&&p.lockedVals['__customer__'])||'Unknown';
+    if (!custMap[c]) custMap[c] = { name:c, projs:[] };
+    custMap[c].projs.push(p);
+  });
+  const topCustomers = Object.values(custMap).sort((a,b)=>b.projs.length-a.projs.length).slice(0,8);
+  const statusColorsMap = { 'Submitted':'#185FA5','Under Review':'#BA7517','Accepted':'#3B6D11','Completed':'#0C447C','Deferred':'#633806','Passed':'#a32d2d' };
+
+  const chartsId = 'ins-' + Date.now();
+  container.innerHTML = `
+  <div class="charts-row" id="${chartsId}">
+    <div class="chart-card">
+      <div class="chart-title">Submissions over time <span style="font-size:10px;color:#aaa;font-weight:400;">(12 months)</span></div>
+      <div class="chart-canvas-wrap"><canvas id="chart-subs-${chartsId}"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Pipeline by status</div>
+      <div class="chart-canvas-wrap"><canvas id="chart-pipe-${chartsId}"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Score distribution</div>
+      <div class="chart-canvas-wrap"><canvas id="chart-score-${chartsId}"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Avg score by rep <span style="font-size:10px;color:#aaa;font-weight:400;">(top ${repEntries.length})</span></div>
+      <div class="chart-canvas-wrap"><canvas id="chart-rep-${chartsId}"></canvas></div>
+    </div>
+    ${typeNames.length > 1 ? `<div class="chart-card">
+      <div class="chart-title">Acceptance rate by project type</div>
+      <div class="chart-canvas-wrap"><canvas id="chart-type-${chartsId}"></canvas></div>
+    </div>` : ''}
+    <div class="chart-card" style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;">
+      <div style="font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;">Avg time to decision</div>
+      <div style="font-size:40px;font-weight:500;color:#1a1a1a;">${avgDays !== null ? avgDays : '—'}</div>
+      <div style="font-size:12px;color:#aaa;">days from submission</div>
+      <div style="font-size:11px;color:#bbb;margin-top:4px;">${decidedProjs.length} decided project${decidedProjs.length!==1?'s':''}</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">
+    <div class="chart-card">
+      <div class="chart-title">Criteria scoring breakdown</div>
+      ${criteriaStats.length ? criteriaStats.map(c => `
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f7f7f5;">
+          <div style="flex:1;font-size:12px;color:#1a1a1a;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.label}</div>
+          <div style="font-size:13px;font-weight:500;color:${c.color};flex-shrink:0;">${c.avg}<span style="font-size:10px;color:#aaa;">/10</span></div>
+          <div style="width:80px;flex-shrink:0;">
+            <div style="height:6px;background:#f0f0ee;border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${c.pct}%;background:${c.color};border-radius:3px;"></div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:#bbb;flex-shrink:0;width:48px;text-align:right;">${c.n} scored</div>
+        </div>`).join('') : '<div style="font-size:13px;color:#aaa;padding:8px 0;">No criteria data yet.</div>'}
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Top customers</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr>
+          <th style="text-align:left;font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;padding:4px 0;border-bottom:2px solid #f0f0ee;">Customer</th>
+          <th style="text-align:right;font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;padding:4px 0;border-bottom:2px solid #f0f0ee;">Total</th>
+          <th style="text-align:right;font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;padding:4px 0;border-bottom:2px solid #f0f0ee;">Avg</th>
+          <th style="text-align:right;font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;padding:4px 0;border-bottom:2px solid #f0f0ee;">Accept %</th>
+        </tr></thead>
+        <tbody>
+          ${topCustomers.map(c => {
+            const td = c.projs.filter(p=>['Accepted','Completed','Deferred','Passed'].includes(p.status));
+            const ta = c.projs.filter(p=>p.status==='Accepted').length;
+            const avg = Math.round(c.projs.reduce((s,p)=>s+(p.score||0),0)/c.projs.length);
+            const rate = td.length ? Math.round((ta/td.length)*100)+'%' : '—';
+            const color = avg>=75?'#3B6D11':avg>=55?'#BA7517':'#a32d2d';
+            return `<tr>
+              <td style="padding:7px 0;border-bottom:1px solid #f7f7f5;font-weight:500;">${c.name}</td>
+              <td style="padding:7px 0;border-bottom:1px solid #f7f7f5;text-align:right;">${c.projs.length}</td>
+              <td style="padding:7px 0;border-bottom:1px solid #f7f7f5;text-align:right;font-weight:500;color:${color};">${avg}</td>
+              <td style="padding:7px 0;border-bottom:1px solid #f7f7f5;text-align:right;">${rate}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+  // ── Draw charts
+  requestAnimationFrame(() => {
+    const chartDefaults = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ' ' + (ctx.parsed.y ?? ctx.parsed) } } }, scales:{ x:{ grid:{ display:false }, ticks:{ font:{ size:11 }, color:'#888' } }, y:{ grid:{ color:'#f0f0ee' }, ticks:{ font:{ size:11 }, color:'#888' }, beginAtZero:true } } };
+
+    const subCtx = document.getElementById('chart-subs-' + chartsId);
+    if (subCtx) new Chart(subCtx, { type:'bar', data:{ labels: months12.map(m=>m.label), datasets:[
+      { label:'Submitted', data: monthSubs, backgroundColor:'#B5D4F4', borderRadius:3 },
+      { label:'Accepted', data: monthAccepted, backgroundColor:'#3B6D11', borderRadius:3 }
+    ]}, options:{ ...chartDefaults, plugins:{ legend:{ display:true, labels:{ font:{ size:11 }, color:'#888', boxWidth:12 } } } } });
+
+    const pipeCtx = document.getElementById('chart-pipe-' + chartsId);
+    if (pipeCtx) new Chart(pipeCtx, { type:'doughnut', data:{ labels: STATUS_ORDER, datasets:[{ data: statusCounts, backgroundColor: STATUS_ORDER.map(s => statusColors[s]), borderWidth:2, borderColor:'#fff', hoverOffset:4 }]}, options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{ legend:{ position:'right', labels:{ font:{ size:11 }, color:'#555', boxWidth:12, padding:8 } }, tooltip:{ callbacks:{ label: ctx => ' ' + ctx.label + ': ' + ctx.parsed } } } } });
+
+    const scoreCtx = document.getElementById('chart-score-' + chartsId);
+    if (scoreCtx) new Chart(scoreCtx, { type:'bar', data:{ labels: bucketLabels, datasets:[{ data: bucketCounts, backgroundColor: bucketColors, borderRadius:3 }]}, options:{ ...chartDefaults } });
+
+    const repCtx = document.getElementById('chart-rep-' + chartsId);
+    if (repCtx) new Chart(repCtx, { type:'bar', data:{ labels: repEntries.map(r=>r.name.split(' ')[0]), datasets:[{ data: repEntries.map(r=>r.avg), backgroundColor:'#185FA5', borderRadius:3 }]}, options:{ ...chartDefaults, scales:{ ...chartDefaults.scales, y:{ ...chartDefaults.scales.y, max:100 } } } });
+
+    if (typeNames.length > 1) {
+      const typeCtx = document.getElementById('chart-type-' + chartsId);
+      if (typeCtx) new Chart(typeCtx, { type:'bar', data:{ labels: typeNames, datasets:[{ data: typeRates, backgroundColor:'#3B6D11', borderRadius:3 }]}, options:{ ...chartDefaults, scales:{ ...chartDefaults.scales, y:{ ...chartDefaults.scales.y, max:100, ticks:{ ...chartDefaults.scales.y.ticks, callback: v => v + '%' } } } } });
+    }
+  });
 }
 
 
@@ -2274,7 +2651,7 @@ function renderSubmitters() {
 
   let reps = Object.values(map).map(r => {
     const total = r.projects.length;
-    const decided = r.projects.filter(p => ['Accepted','Deferred','Passed'].includes(p.status));
+    const decided = r.projects.filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status));
     const accepted = r.projects.filter(p => p.status === 'Accepted').length;
     const avgScore = Math.round(r.projects.reduce((s,p) => s+(p.score||0), 0) / total);
     const acceptRate = decided.length ? Math.round((accepted/decided.length)*100) : null;
@@ -2293,7 +2670,7 @@ function renderSubmitters() {
     return 0;
   });
 
-  const statusColors = { 'Submitted':'#185FA5','Under Review':'#BA7517','Accepted':'#3B6D11','Deferred':'#633806','Passed':'#a32d2d' };
+  const statusColors = { 'Submitted':'#185FA5','Under Review':'#BA7517','Accepted':'#3B6D11','Completed':'#0C447C','Deferred':'#633806','Passed':'#a32d2d' };
   const initials = name => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 
   container.innerHTML = `
@@ -2357,8 +2734,376 @@ function filterToSubmitter(key) {
 }
 
 
+/* ── REPORT EXPORT ── */
+function exportToExcel() {
+  if (!projects.length) { toast('No projects to export.'); return; }
+
+  const today = new Date();
+  const todayStr = today.toLocaleDateString('default', { year:'numeric', month:'long', day:'numeric' });
+  const total = projects.length;
+  const decided = projects.filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status));
+  const acceptedCount = projects.filter(p => p.status === 'Accepted').length;
+  const completedCount = projects.filter(p => p.status === 'Completed').length;
+  const avgScore = Math.round(projects.reduce((s,p) => s+(p.score||0),0)/total);
+  const acceptRate = decided.length ? Math.round((acceptedCount/decided.length)*100) : 0;
+  const statusColors = { 'Submitted':'#185FA5','Under Review':'#BA7517','Accepted':'#3B6D11','Completed':'#0C447C','Deferred':'#633806','Passed':'#a32d2d' };
+  const tierColors = { 'Pursue':'#3B6D11','Evaluate':'#BA7517','Defer':'#C06000','Pass':'#a32d2d' };
+
+  // ── Status breakdown
+  const statusRows = STATUS_ORDER.map(s => {
+    const cnt = projects.filter(p=>(p.status||'Submitted')===s).length;
+    const pct = total ? Math.round((cnt/total)*100) : 0;
+    return `<tr><td>${s}</td><td style="text-align:right;font-weight:500;">${cnt}</td><td style="width:140px;padding-left:12px;"><div style="height:8px;background:#f0f0ee;border-radius:4px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${statusColors[s]};border-radius:4px;"></div></div></td><td style="text-align:right;color:#888;font-size:12px;">${pct}%</td></tr>`;
+  }).join('');
+
+  // ── Tier breakdown
+  const tiers = [{l:'Pursue',min:75},{l:'Evaluate',min:55},{l:'Defer',min:35},{l:'Pass',min:0}];
+  const tierRows = tiers.map((t,i) => {
+    const max = i===0?101:tiers[i-1].min;
+    const cnt = projects.filter(p=>p.score>=t.min&&p.score<max).length;
+    const pct = total ? Math.round((cnt/total)*100) : 0;
+    return `<tr><td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;background:${tierColors[t.l]}22;color:${tierColors[t.l]};">${t.l}</span></td><td style="text-align:right;font-weight:500;">${cnt}</td><td style="width:140px;padding-left:12px;"><div style="height:8px;background:#f0f0ee;border-radius:4px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${tierColors[t.l]};border-radius:4px;"></div></div></td><td style="text-align:right;color:#888;font-size:12px;">${pct}%</td></tr>`;
+  }).join('');
+
+  // ── By project type
+  const typeNames = [...new Set(projects.map(p=>p.projectType||'Unknown').filter(Boolean))];
+  const typeRows = typeNames.map(t => {
+    const tp = projects.filter(p=>(p.projectType||'Unknown')===t);
+    const td = tp.filter(p=>['Accepted','Completed','Deferred','Passed'].includes(p.status));
+    const ta = tp.filter(p=>p.status==='Accepted').length;
+    const rate = td.length ? Math.round((ta/td.length)*100) : null;
+    const avg = Math.round(tp.reduce((s,p)=>s+(p.score||0),0)/tp.length);
+    return `<tr><td>${t}</td><td style="text-align:right;">${tp.length}</td><td style="text-align:right;">${avg}</td><td style="text-align:right;">${rate!==null?rate+'%':'—'}</td></tr>`;
+  }).join('');
+
+  // ── By rep
+  const repMap = {};
+  projects.forEach(p => {
+    const name = (p.lockedVals&&p.lockedVals['__submitter__'])||'Unknown';
+    const email = (p.lockedVals&&p.lockedVals['__email__'])||'';
+    const key = email||name;
+    if (!repMap[key]) repMap[key] = {name,email,projs:[]};
+    repMap[key].projs.push(p);
+  });
+  const repRows = Object.values(repMap).sort((a,b)=>b.projs.length-a.projs.length).map(r => {
+    const rd = r.projs.filter(p=>['Accepted','Completed','Deferred','Passed'].includes(p.status));
+    const ra = r.projs.filter(p=>p.status==='Accepted').length;
+    const avg = Math.round(r.projs.reduce((s,p)=>s+(p.score||0),0)/r.projs.length);
+    const rate = rd.length ? Math.round((ra/rd.length)*100) : null;
+    const scoreColor = avg >= 75 ? '#3B6D11' : avg >= 55 ? '#BA7517' : '#a32d2d';
+    return `<tr><td>${r.name}<div style="font-size:11px;color:#999;">${r.email}</div></td><td style="text-align:right;">${r.projs.length}</td><td style="text-align:right;font-weight:500;color:${scoreColor};">${avg}</td><td style="text-align:right;">${rate!==null?rate+'%':'—'}</td></tr>`;
+  }).join('');
+
+  // ── Projects table (top 20 by score)
+  const topProjects = [...projects].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,20);
+  const projectRows = topProjects.map(p => {
+    const name = (p.lockedVals&&p.lockedVals['__name__'])||p.name||'';
+    const customer = (p.lockedVals&&p.lockedVals['__customer__'])||'';
+    const rep = (p.lockedVals&&p.lockedVals['__submitter__'])||'';
+    const sc = STATUS_CONFIG[p.status||'Submitted']||STATUS_CONFIG['Submitted'];
+    const tc = tierColors[p.tier]||'#888';
+    return `<tr>
+      <td style="max-width:200px;"><div style="font-weight:500;color:#1a1a1a;">${name}</div><div style="font-size:11px;color:#999;">${customer}</div></td>
+      <td style="text-align:center;"><span style="font-size:18px;font-weight:500;color:${tc};">${p.score}</span></td>
+      <td style="text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;background:${tc}22;color:${tc};">${p.tier||''}</span></td>
+      <td style="text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;background:${sc.bg};color:${sc.color};">${p.status||'Submitted'}</span></td>
+      <td style="color:#888;font-size:12px;">${rep}</td>
+      <td style="color:#888;font-size:12px;">${p.date||''}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Monthly chart data for inline SVG bars
+  const months6 = [];
+  for (let i=5;i>=0;i--) {
+    const d = new Date(today.getFullYear(),today.getMonth()-i,1);
+    const cnt = projects.filter(p=>{if(!p.date)return false;const pd=new Date(p.date);return pd.getMonth()===d.getMonth()&&pd.getFullYear()===d.getFullYear();}).length;
+    months6.push({label:d.toLocaleString('default',{month:'short'}),count:cnt});
+  }
+  const maxMonth = Math.max(...months6.map(m=>m.count),1);
+  const monthBars = months6.map(m=>`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+      <div style="font-size:11px;font-weight:500;color:#185FA5;">${m.count||''}</div>
+      <div style="width:100%;display:flex;align-items:flex-end;height:60px;">
+        <div style="width:100%;background:#185FA5;border-radius:3px 3px 0 0;height:${Math.max(4,Math.round((m.count/maxMonth)*60))}px;transition:height 0.3s;"></div>
+      </div>
+      <div style="font-size:11px;color:#888;">${m.label}</div>
+    </div>`).join('');
+
+  // ── Overdue revisits
+  const overdueProjs = projects.filter(p => {
+    if ((p.status||'Submitted') !== 'Deferred' || !p.revisitDate) return false;
+    const parts = p.revisitDate.split('-');
+    if (parts.length !== 3) return false;
+    return new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2])) < today;
+  }).sort((a,b) => a.revisitDate.localeCompare(b.revisitDate));
+
+  const overdueRows = overdueProjs.map(p => {
+    const name = (p.lockedVals&&p.lockedVals['__name__'])||p.name||'';
+    const customer = (p.lockedVals&&p.lockedVals['__customer__'])||'';
+    const rep = (p.lockedVals&&p.lockedVals['__submitter__'])||'';
+    const parts = p.revisitDate.split('-');
+    const rd = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+    const daysOver = Math.round((today-rd)/(1000*60*60*24));
+    return `<tr>
+      <td><div style="font-weight:500;">${name}</div><div style="font-size:11px;color:#999;">${customer}</div></td>
+      <td style="color:#888;font-size:12px;">${rep}</td>
+      <td style="color:#a32d2d;font-weight:500;">${rd.toLocaleDateString()}</td>
+      <td style="color:#a32d2d;font-size:12px;">${daysOver} day${daysOver!==1?'s':''} overdue</td>
+      <td style="color:#888;font-size:12px;">${p.decisionNotes||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Criteria breakdown
+  const criteriaStats = criteria.map(c => {
+    const scored = projects.filter(p => p.criteriaVals && (p.criteriaVals[c.id] !== null && p.criteriaVals[c.id] !== undefined));
+    if (!scored.length) return null;
+    const avg = scored.reduce((s,p) => s + Number(p.criteriaVals[c.id]), 0) / scored.length;
+    const avgRounded = Math.round(avg * 10) / 10;
+    const pct = Math.round((avg/10)*100);
+    const color = avg >= 7 ? '#3B6D11' : avg >= 5 ? '#BA7517' : '#a32d2d';
+    return { label: c.label, avg: avgRounded, pct, color, n: scored.length };
+  }).filter(Boolean).sort((a,b) => b.avg - a.avg);
+
+  const criteriaRows = criteriaStats.map(c =>
+    `<tr>
+      <td style="max-width:220px;">${c.label}</td>
+      <td style="text-align:right;font-weight:500;color:${c.color};">${c.avg}<span style="font-size:11px;color:#aaa;">/10</span></td>
+      <td style="width:160px;padding-left:12px;">
+        <div style="height:8px;background:#f0f0ee;border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${c.pct}%;background:${c.color};border-radius:4px;"></div>
+        </div>
+      </td>
+      <td style="text-align:right;color:#aaa;font-size:11px;">${c.n} scored</td>
+    </tr>`
+  ).join('');
+
+  // ── Top customers
+  const customerMap = {};
+  projects.forEach(p => {
+    const cust = (p.lockedVals&&p.lockedVals['__customer__'])||'Unknown';
+    if (!customerMap[cust]) customerMap[cust] = {name:cust, projs:[]};
+    customerMap[cust].projs.push(p);
+  });
+  const topCustomers = Object.values(customerMap).sort((a,b)=>b.projs.length-a.projs.length).slice(0,8);
+  const customerRows = topCustomers.map(c => {
+    const avg = Math.round(c.projs.reduce((s,p)=>s+(p.score||0),0)/c.projs.length);
+    const color = avg>=75?'#3B6D11':avg>=55?'#BA7517':'#a32d2d';
+    const statuses = STATUS_ORDER.map(s => {
+      const cnt = c.projs.filter(p=>(p.status||'Submitted')===s).length;
+      return cnt ? `<span style="font-size:10px;padding:1px 6px;border-radius:3px;background:${statusColors[s]}22;color:${statusColors[s]};margin-right:3px;">${s} ${cnt}</span>` : '';
+    }).join('');
+    return `<tr>
+      <td style="font-weight:500;">${c.name}</td>
+      <td style="text-align:right;">${c.projs.length}</td>
+      <td style="text-align:right;font-weight:500;color:${color};">${avg}</td>
+      <td>${statuses}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Score trend (this month vs last month)
+  const thisMonthProjs = projects.filter(p => { if (!p.date) return false; const d=new Date(p.date); return d.getMonth()===today.getMonth()&&d.getFullYear()===today.getFullYear(); });
+  const lastMonthDate = new Date(today.getFullYear(), today.getMonth()-1, 1);
+  const lastMonthProjs = projects.filter(p => { if (!p.date) return false; const d=new Date(p.date); return d.getMonth()===lastMonthDate.getMonth()&&d.getFullYear()===lastMonthDate.getFullYear(); });
+  const thisMonthAvg = thisMonthProjs.length ? Math.round(thisMonthProjs.reduce((s,p)=>s+(p.score||0),0)/thisMonthProjs.length) : null;
+  const lastMonthAvg = lastMonthProjs.length ? Math.round(lastMonthProjs.reduce((s,p)=>s+(p.score||0),0)/lastMonthProjs.length) : null;
+  const scoreTrend = (thisMonthAvg !== null && lastMonthAvg !== null) ? thisMonthAvg - lastMonthAvg : null;
+  const trendHtml = scoreTrend !== null
+    ? `<span style="font-size:13px;color:${scoreTrend>0?'#3B6D11':scoreTrend<0?'#a32d2d':'#888'};">${scoreTrend>0?'↑':scoreTrend<0?'↓':'→'} ${Math.abs(scoreTrend)} pts vs last month</span>`
+    : '';
+
+  // ── Decided vs pending
+  const pending = projects.filter(p => ['Submitted','Under Review'].includes(p.status||'Submitted')).length;
+  const decidedPct = total ? Math.round((decided.length/total)*100) : 0;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Runway Report — ${todayStr}</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#f5f5f3; color:#1a1a1a; font-size:14px; }
+  .page { max-width:900px; margin:0 auto; padding:2.5rem 2rem 4rem; }
+  .header { margin-bottom:2.5rem; padding-bottom:1.5rem; border-bottom:2px solid #1a1a1a; display:flex; align-items:flex-end; justify-content:space-between; }
+  .brand { font-size:28px; font-weight:500; letter-spacing:-0.5px; }
+  .brand span { color:#888; font-weight:400; font-size:16px; margin-left:8px; }
+  .report-meta { text-align:right; font-size:13px; color:#888; line-height:1.7; }
+  .section { margin-bottom:2rem; }
+  .section-title { font-size:11px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:1rem; }
+  .metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:2rem; }
+  .metric { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:16px 18px; }
+  .metric-label { font-size:11px; color:#888; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+  .metric-value { font-size:28px; font-weight:500; color:#1a1a1a; line-height:1; }
+  .metric-sub { font-size:12px; color:#aaa; margin-top:4px; }
+  .card { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:20px 22px; margin-bottom:14px; }
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { font-size:11px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.05em; padding:8px 10px; border-bottom:2px solid #f0f0ee; text-align:left; }
+  td { padding:10px 10px; border-bottom:1px solid #f7f7f5; vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#fafaf9; }
+  .footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #e5e5e5; font-size:12px; color:#bbb; display:flex; justify-content:space-between; }
+  @media print {
+    body { background:#fff; }
+    .page { padding:1rem; }
+    tr:hover td { background:none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <div class="brand">Runway <span>Prioritization Report</span></div>
+    </div>
+    <div class="report-meta">
+      Generated ${todayStr}<br>
+      ${total} project${total!==1?'s':''} · all time
+    </div>
+  </div>
+
+  <!-- Key metrics -->
+  <div class="metric-grid" style="grid-template-columns:repeat(6,1fr);">
+    <div class="metric">
+      <div class="metric-label">Total projects</div>
+      <div class="metric-value">${total}</div>
+      <div class="metric-sub">All time</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Avg score</div>
+      <div class="metric-value" style="color:${avgScore>=75?'#3B6D11':avgScore>=55?'#BA7517':'#a32d2d'};">${avgScore}</div>
+      <div class="metric-sub">${trendHtml||'Out of 100'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Acceptance rate</div>
+      <div class="metric-value">${acceptRate}%</div>
+      <div class="metric-sub">${decided.length} decided</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Accepted</div>
+      <div class="metric-value" style="color:#3B6D11;">${acceptedCount}</div>
+      <div class="metric-sub">of ${total} submitted</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Completed</div>
+      <div class="metric-value" style="color:#0C447C;">${completedCount}</div>
+      <div class="metric-sub">shipped to Jira</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Pending decision</div>
+      <div class="metric-value">${pending}</div>
+      <div class="metric-sub">${decidedPct}% decided</div>
+    </div>
+    <div class="metric" style="${overdueProjs.length>0?'border-color:#F7C1C1;background:#FCEBEB;':''}">
+      <div class="metric-label" style="${overdueProjs.length>0?'color:#a32d2d;':''}">Overdue revisits</div>
+      <div class="metric-value" style="color:${overdueProjs.length>0?'#a32d2d':'#1a1a1a'};">${overdueProjs.length}</div>
+      <div class="metric-sub">${overdueProjs.length>0?'Needs attention':'All clear'}</div>
+    </div>
+  </div>
+
+  <!-- Submissions chart + Status breakdown -->
+  <div class="two-col">
+    <div class="card">
+      <div class="section-title">Submissions — last 6 months</div>
+      <div style="display:flex;gap:6px;align-items:flex-end;padding-top:8px;">${monthBars}</div>
+    </div>
+    <div class="card">
+      <div class="section-title">Pipeline by status</div>
+      <table><tbody>${statusRows}</tbody></table>
+    </div>
+  </div>
+
+  <!-- Tier breakdown + By type -->
+  <div class="two-col">
+    <div class="card">
+      <div class="section-title">Score tiers</div>
+      <table><tbody>${tierRows}</tbody></table>
+    </div>
+    ${typeNames.length > 0 ? `<div class="card">
+      <div class="section-title">By project type</div>
+      <table>
+        <thead><tr><th>Type</th><th style="text-align:right;">Total</th><th style="text-align:right;">Avg</th><th style="text-align:right;">Accept %</th></tr></thead>
+        <tbody>${typeRows}</tbody>
+      </table>
+    </div>` : ''}
+  </div>
+
+  <!-- By rep -->
+  <div class="card section">
+    <div class="section-title">By rep</div>
+    <table>
+      <thead><tr><th>Rep</th><th style="text-align:right;">Submitted</th><th style="text-align:right;">Avg Score</th><th style="text-align:right;">Accept %</th></tr></thead>
+      <tbody>${repRows}</tbody>
+    </table>
+  </div>
+
+  <!-- Top projects -->
+  <div class="card">
+    <div class="section-title">Top projects by score${topProjects.length < projects.length ? ' (top 20)' : ''}</div>
+    <table>
+      <thead><tr><th>Project</th><th style="text-align:center;">Score</th><th style="text-align:center;">Tier</th><th style="text-align:center;">Status</th><th>Rep</th><th>Submitted</th></tr></thead>
+      <tbody>${projectRows}</tbody>
+    </table>
+  </div>
+
+  <!-- Dynamic sections injected via JS concatenation -->
+  ` + (overdueProjs.length > 0 ? `
+  <div class="card" style="border-color:#F7C1C1;">
+    <div class="section-title" style="color:#a32d2d;">Overdue revisits — ${overdueProjs.length} project${overdueProjs.length!==1?'s':''} need attention</div>
+    <table>
+      <thead><tr><th>Project</th><th>Rep</th><th>Revisit date</th><th>Overdue by</th><th>Notes</th></tr></thead>
+      <tbody>${overdueRows}</tbody>
+    </table>
+  </div>` : '') + `
+
+  ` + (criteriaRows ? `
+  <div class="card">
+    <div class="section-title">Criteria scoring breakdown <span style="font-size:10px;font-weight:400;color:#aaa;text-transform:none;letter-spacing:0;">avg score per criterion across all projects, sorted highest to lowest</span></div>
+    <table><tbody>${criteriaRows}</tbody></table>
+  </div>` : '') + `
+
+  <div class="card">
+    <div class="section-title">Top customers by submissions</div>
+    <table>
+      <thead><tr><th>Customer</th><th style="text-align:right;">Submissions</th><th style="text-align:right;">Avg Score</th><th>Status breakdown</th></tr></thead>
+      <tbody>${customerRows}</tbody>
+    </table>
+  </div>
+
+    <div class="footer">
+    <span>Runway — Prioritize what ships</span>
+    <span>Generated ${todayStr}</span>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  // Try new tab first, fall back to download if blocked (e.g. sandboxed preview)
+  const win = window.open('', '_blank');
+  if (win && !win.closed) {
+    win.document.write(html);
+    win.document.close();
+    toast('Report opened in new tab!');
+  } else {
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'runway-report-' + today.toISOString().slice(0,10) + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Report downloaded — open the file in your browser.');
+  }
+}
+
+
 /* ── LIST FILTERS ── */
-let activeListFilters = { type: '', tier: '', date: '', rep: '' };
+let activeListFilters = { type: '', tier: '', date: '', rep: '', search: '' };
 
 function buildListFilterOptions() {
   // Project types
@@ -2381,17 +3126,18 @@ function buildListFilterOptions() {
 }
 
 function applyListFilters() {
-  activeListFilters.type = (document.getElementById('filter-type')||{}).value || '';
-  activeListFilters.tier = (document.getElementById('filter-tier')||{}).value || '';
-  activeListFilters.date = (document.getElementById('filter-date')||{}).value || '';
-  activeListFilters.rep  = (document.getElementById('filter-rep') ||{}).value || '';
+  activeListFilters.type   = (document.getElementById('filter-type')   ||{}).value || '';
+  activeListFilters.tier   = (document.getElementById('filter-tier')   ||{}).value || '';
+  activeListFilters.date   = (document.getElementById('filter-date')   ||{}).value || '';
+  activeListFilters.rep    = (document.getElementById('filter-rep')    ||{}).value || '';
+  activeListFilters.search = (document.getElementById('project-search')||{}).value || '';
 
   renderProjectList();
 }
 
 function clearListFilters() {
-  activeListFilters = { type: '', tier: '', date: '', rep: '' };
-  ['filter-type','filter-tier','filter-date','filter-rep'].forEach(id => {
+  activeListFilters = { type: '', tier: '', date: '', rep: '', search: '' };
+  ['filter-type','filter-tier','filter-date','filter-rep','project-search'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   renderProjectList();
@@ -2399,6 +3145,13 @@ function clearListFilters() {
 
 function getListFilteredProjects(list) {
   return list.filter(p => {
+    if (activeListFilters.search) {
+      const q = activeListFilters.search.toLowerCase();
+      const name = ((p.lockedVals&&p.lockedVals['__name__'])||p.name||'').toLowerCase();
+      const customer = ((p.lockedVals&&p.lockedVals['__customer__'])||'').toLowerCase();
+      const rep = ((p.lockedVals&&p.lockedVals['__submitter__'])||'').toLowerCase();
+      if (!name.includes(q) && !customer.includes(q) && !rep.includes(q)) return false;
+    }
     if (activeListFilters.type && (p.projectType||'') !== activeListFilters.type) return false;
     if (activeListFilters.tier && (p.tier||'') !== activeListFilters.tier) return false;
     if (activeListFilters.rep  && ((p.lockedVals&&p.lockedVals['__submitter__'])||'') !== activeListFilters.rep) return false;
@@ -2418,6 +3171,10 @@ function getListFilteredProjects(list) {
     return true;
   });
 }
+
+
+/* ── INSIGHTS TOGGLE ── */
+
 
 /* ── DEFERRED REMINDERS (now integrated into metrics) ── */
 function renderDeferredReminders() {
@@ -2478,6 +3235,54 @@ function renderDeferredReminders() {
   container.innerHTML = html;
 }
 
+
+/* ── CRITERIA ROWS HELPER ── */
+function buildCriteriaRows(p) {
+  // Use snapshot if available (criteria may have changed since scoring)
+  if (p.criteriaSnapshot && p.criteriaSnapshot.length) {
+    const hasData = p.criteriaSnapshot.some(c => c.score !== null);
+    if (!hasData) return '';
+    return p.criteriaSnapshot.map(c => {
+      if (c.score === null) return '';
+      return `<div style="padding:8px 0;border-bottom:1px solid #f0f0ee;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">${c.label} <span style="font-weight:400;text-transform:none;letter-spacing:0;">(${c.weightPct}% of score)</span></div>
+          <div style="font-size:13px;color:#1a1a1a;">${c.optionLabel || c.score}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:11px;color:#888;margin-bottom:2px;">Score</div>
+          <div style="font-size:13px;font-weight:500;color:#1a1a1a;">${c.score}/10</div>
+        </div>
+      </div>`;
+    }).filter(Boolean).join('');
+  }
+  // Fallback: live criteria lookup for older projects without a snapshot
+  if (!p.criteriaVals) return '';
+  const totalWeight = criteria.reduce((s, c) => s + getWeight(c.id), 0);
+  const savedKeys = Object.keys(p.criteriaVals);
+  return criteria.map((c, ci) => {
+    let val = p.criteriaVals[c.id];
+    if (val === null || val === undefined) {
+      if (savedKeys[ci] !== undefined) val = p.criteriaVals[savedKeys[ci]];
+    }
+    if (val === null || val === undefined) return '';
+    const numVal = Number(val);
+    if (isNaN(numVal)) return '';
+    const opt = c.options.find(o => Number(o.score) === numVal);
+    const pct = totalWeight > 0 ? Math.round((getWeight(c.id) / totalWeight) * 100) : 0;
+    return `<div style="padding:8px 0;border-bottom:1px solid #f0f0ee;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div style="flex:1;">
+        <div style="font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">${c.label} <span style="font-weight:400;text-transform:none;letter-spacing:0;">(${pct}% of score)</span></div>
+        <div style="font-size:13px;color:#1a1a1a;">${opt ? opt.label : numVal}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:11px;color:#888;margin-bottom:2px;">Score</div>
+        <div style="font-size:13px;font-weight:500;color:#1a1a1a;">${numVal}/10</div>
+      </div>
+    </div>`;
+  }).filter(Boolean).join('');
+}
+
 function renderTracker() {
   renderSummaryMetrics();
   buildStatusFilterBar();
@@ -2533,33 +3338,7 @@ function renderProjectList() {
       </div>`;
     }).filter(Boolean).join('');
 
-    // Build criteria rows with weighted score contribution
-    const totalWeight = criteria.reduce((s, c) => s + getWeight(c.id), 0);
-    const savedKeys = p.criteriaVals ? Object.keys(p.criteriaVals) : [];
-    const criteriaRows = criteria.map((c, ci) => {
-      if (!p.criteriaVals) return '';
-      // 1. Try exact ID match
-      let val = p.criteriaVals[c.id];
-      // 2. Fall back to positional match (for legacy saved projects with old IDs)
-      if (val === null || val === undefined) {
-        if (savedKeys[ci] !== undefined) val = p.criteriaVals[savedKeys[ci]];
-      }
-      if (val === null || val === undefined) return '';
-      const numVal = Number(val);
-      if (isNaN(numVal)) return '';
-      const opt = c.options.find(o => Number(o.score) === numVal);
-      const pct = totalWeight > 0 ? Math.round((getWeight(c.id) / totalWeight) * 100) : 0;
-      return `<div style="padding:8px 0;border-bottom:1px solid #f0f0ee;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-        <div style="flex:1;">
-          <div style="font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">${c.label} <span style="font-weight:400;text-transform:none;letter-spacing:0;">(${pct}% of score)</span></div>
-          <div style="font-size:13px;color:#1a1a1a;">${opt ? opt.label : numVal}</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div style="font-size:11px;color:#888;margin-bottom:2px;">Score</div>
-          <div style="font-size:13px;font-weight:500;color:#1a1a1a;">${numVal}/10</div>
-        </div>
-      </div>`;
-    }).filter(Boolean).join('');
+    const criteriaRows = buildCriteriaRows(p);
 
     // Build revisit date selects
     const rdParts = (p.revisitDate || '').split('-');
@@ -2816,7 +3595,7 @@ function showDecisionEmailModal(id) {
   const p = projects.find(x => x.id == id); if (!p) return;
   const submitterEmail = (p.lockedVals && p.lockedVals['__email__']) || '';
   const submitterName = (p.lockedVals && p.lockedVals['__submitter__']) || '';
-  const initialStatus = ['Accepted','Deferred','Passed'].includes(p.status) ? p.status : 'Accepted';
+  const initialStatus = ['Accepted','Completed','Deferred','Passed'].includes(p.status) ? p.status : 'Accepted';
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
@@ -2830,7 +3609,7 @@ function showDecisionEmailModal(id) {
       <div class="field">
         <label style="font-size:13px;">Decision</label>
         <select id="de-status" style="font-size:13px;" onchange="updateDecisionPreview('${p.id}')">
-          ${STATUS_ORDER.filter(s => ['Accepted','Deferred','Passed'].includes(s)).map(s => `<option value="${s}" ${initialStatus===s?'selected':''}>${s}</option>`).join('')}
+          ${STATUS_ORDER.filter(s => ['Accepted','Completed','Deferred','Passed'].includes(s)).map(s => `<option value="${s}" ${initialStatus===s?'selected':''}>${s}</option>`).join('')}
         </select>
       </div>
       <div class="field" id="de-revisit-field" style="display:${initialStatus === 'Deferred' ? 'block' : 'none'};">
@@ -4378,6 +5157,9 @@ function generateSampleProjects() {
     { name: 'PDF invoice generation',     company: companies[7], rep: repProfiles.priya,  score: 61, status: 'Deferred',     daysAgo: 18, ptLabel: firstPt.label, notes: 'Low effort but low priority. Revisit next quarter.', revisitDays: -5 },
     { name: 'Advanced search & filtering',company: companies[0], rep: repProfiles.sarah,  score: 79, status: 'Accepted',     daysAgo: 45, ptLabel: firstPt.label, notes: 'Widely requested. Scoped and approved.' },
     { name: 'White-label branding',       company: companies[3], rep: repProfiles.jordan, score: 35, status: 'Passed',       daysAgo: 60, ptLabel: firstPt.label, notes: 'Outside current product direction.' },
+    { name: 'Two-factor authentication',  company: companies[1], rep: repProfiles.marcus, score: 93, status: 'Completed',    daysAgo: 90, ptLabel: firstPt.label, notes: 'Shipped in v4.2. Strong security compliance driver.' },
+    { name: 'CSV data import',            company: companies[2], rep: repProfiles.priya,  score: 82, status: 'Completed',    daysAgo: 75, ptLabel: firstPt.label, notes: 'Released last quarter. Positive rep feedback.' },
+    { name: 'Email digest notifications', company: companies[5], rep: repProfiles.marcus, score: 71, status: 'Completed',    daysAgo: 110, ptLabel: firstPt.label, notes: 'Shipped as part of notification overhaul.' },
   ];
 
   // Use second project type if available for variety
@@ -4638,21 +5420,22 @@ function showTab(tab) {
   // Remove back bar if present
   const bb = document.getElementById('config-back-bar');
   if (bb) bb.remove();
-  ['intake','tracker','submitters','weights','editor','help','settings'].forEach(t => {
+  ['intake','tracker','submitters','insights','weights','editor','help','settings'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.toggle('active', t === tab);
   });
   // Only highlight tabs that are in the main nav
-  const navTabs = ['tracker','submitters','help'];
+  const navTabs = ['tracker','submitters','insights','help'];
   const navTabEls = document.querySelectorAll('#main-tabs .tab');
   navTabEls.forEach((el, i) => {
     if (el) el.classList.toggle('active', navTabs[i] === tab);
   });
   // Show FAB on dashboard, hide on intake
   const fab = document.getElementById('new-request-fab');
-  if (fab) fab.style.display = ['tracker','submitters','help'].includes(tab) ? 'flex' : 'none';
-  else setTimeout(() => { const f = document.getElementById('new-request-fab'); if (f) f.style.display = ['tracker','submitters','help'].includes(tab) ? 'flex' : 'none'; }, 100);
+  if (fab) fab.style.display = ['tracker','submitters','insights','help'].includes(tab) ? 'flex' : 'none';
+  else setTimeout(() => { const f = document.getElementById('new-request-fab'); if (f) f.style.display = ['tracker','submitters','insights','help'].includes(tab) ? 'flex' : 'none'; }, 100);
   if (tab === 'tracker') { renderTracker(); }
+  if (tab === 'insights') { populateInsightsFilters(); renderInsights(); }
   if (tab === 'submitters') { renderSubmitters(); }
   if (tab === 'weights') { buildPresetButtons(); buildWeightSliders(); buildTierThresholds(); buildProjectTypeMappings(); }
   if (tab === 'editor') { renderEditor(); renderDetailEditor(); }

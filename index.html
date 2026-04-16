@@ -8,7 +8,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { overflow-y: scroll; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; font-size: 16px; min-height: 100vh; }
-  .app { max-width: 820px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  .app { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
   h1 { font-size: 22px; font-weight: 500; }
   .tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; flex-wrap: wrap; }
   .tab { padding: 7px 16px; font-size: 13px; font-weight: 500; border-radius: 8px; border: 1px solid transparent; color: #666; background: transparent; font-family: inherit; cursor: pointer; }
@@ -179,11 +179,21 @@
   .view-toggle { display:flex; gap:0; margin-bottom:1rem; border:1px solid #e5e5e5; border-radius:8px; overflow:hidden; width:fit-content; }
   .view-toggle-btn { font-family:inherit; font-size:12px; font-weight:500; padding:6px 14px; border:none; background:#fff; color:#888; cursor:pointer; transition:all 0.15s; }
   .view-toggle-btn.active { background:#1a1a1a; color:#fff; }
-  .kanban-board { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; align-items:start; }
-  .kanban-col { border-radius:10px; background:#fafaf9; border:1px solid #e5e5e5; min-height:200px; display:flex; flex-direction:column; }
-  .kanban-col-header { padding:10px 12px 8px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #e5e5e5; }
+  .kanban-board { display:flex; gap:10px; align-items:start; }
+  .kanban-col { border-radius:10px; background:#fafaf9; border:1px solid #e5e5e5; min-height:200px; display:flex; flex-direction:column; flex:1; min-width:0; transition:flex 0.2s ease, min-width 0.2s ease; }
+  .kanban-col.collapsed { flex:0 0 48px; min-width:48px; min-height:0; overflow:hidden; }
+  .kanban-col-header { padding:10px 12px 8px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #e5e5e5; cursor:pointer; user-select:none; }
+  .kanban-col.collapsed .kanban-col-header { flex-direction:column; align-items:center; justify-content:flex-start; gap:8px; padding:12px 0; border-bottom:none; height:100%; writing-mode:unset; }
   .kanban-col-title { font-size:12px; font-weight:600; color:#1a1a1a; }
+  .kanban-col.collapsed .kanban-col-title { writing-mode:vertical-rl; transform:rotate(180deg); font-size:11px; }
   .kanban-col-count { font-size:11px; color:#aaa; background:#f0f0ee; border-radius:10px; padding:1px 7px; }
+  .kanban-col.collapsed .kanban-col-count { writing-mode:unset; transform:none; }
+  .kanban-col.collapsed .kanban-cards { display:none; }
+  .kanban-col-toggle { font-size:11px; color:#bbb; flex-shrink:0; }
+  .kanban-sort-bar { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .kanban-sort-label { font-size:12px; color:#888; }
+  .kanban-sort-btn { font-family:inherit; font-size:12px; padding:4px 10px; border:1px solid #ddd; border-radius:6px; background:#fff; color:#888; cursor:pointer; transition:all 0.15s; }
+  .kanban-sort-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
   .kanban-cards { padding:8px; display:flex; flex-direction:column; gap:6px; flex:1; min-height:120px; }
   .kanban-card { background:#fff; border:1px solid #e5e5e5; border-radius:8px; padding:10px 12px; cursor:pointer; transition:box-shadow 0.15s, border-color 0.15s; user-select:none; }
   .kanban-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.08); border-color:#ccc; }
@@ -306,6 +316,12 @@
         <div id="projects-list"></div>
       </div>
       <div id="board-view" style="display:none;">
+        <div class="kanban-sort-bar" id="kanban-toolbar">
+          <span class="kanban-sort-label">Sort by</span>
+          <button class="kanban-sort-btn active" id="sort-btn-score" onclick="setKanbanSort('score')">Score</button>
+          <button class="kanban-sort-btn" id="sort-btn-date" onclick="setKanbanSort('date')">Date</button>
+          <div id="kanban-type-filters" style="display:flex;align-items:center;gap:6px;margin-left:12px;padding-left:12px;border-left:1px solid #e5e5e5;"></div>
+        </div>
         <div class="kanban-board" id="kanban-board"></div>
       </div>
     </div>
@@ -433,6 +449,31 @@
     </div>
 
     <div class="section">
+      <div class="section-title">Rep links</div>
+      <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Generate a personalized intake form link for each rep. Their name and email will be pre-filled and locked so they can't be changed on submission.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="field" style="margin-bottom:0;">
+          <label style="font-size:13px;">Rep name</label>
+          <input type="text" id="rep-link-name" placeholder="e.g. Sarah Chen">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label style="font-size:13px;">Rep email</label>
+          <input type="text" id="rep-link-email" placeholder="e.g. sarah@company.com">
+        </div>
+      </div>
+      <div class="btn-row" style="margin-bottom:10px;">
+        <button class="btn-primary" onclick="generateRepLink()">Generate link</button>
+      </div>
+      <div id="rep-link-output" style="display:none;">
+        <div style="background:#f5f5f3;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+          <input type="text" id="rep-link-url" readonly style="flex:1;background:transparent;border:none;font-size:12px;font-family:monospace;color:#1a1a1a;outline:none;cursor:text;">
+          <button class="btn-secondary" style="font-size:12px;padding:4px 12px;flex-shrink:0;" onclick="copyRepLink()">Copy</button>
+        </div>
+        <p style="font-size:12px;color:#888;margin-top:6px;">Send this link to the rep. Their name and email will be locked on the form.</p>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Settings backup</div>
       <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Export or import all configuration — criteria, weights, presets, project types, tier thresholds, and help content. Use this to back up your setup or move it to another device.</p>
       <div class="btn-row">
@@ -456,6 +497,10 @@
         <button class="btn-secondary" onclick="exportProjects()">Export projects backup</button>
         <button class="btn-secondary" onclick="document.getElementById('import-file-projects').click()">Import projects backup</button>
         <input type="file" id="import-file-projects" accept=".json" onchange="importProjects(event)" style="display:none;">
+      </div>
+      <div style="border-top:1px solid #f0f0ee;margin-top:1.25rem;padding-top:1.25rem;">
+        <p style="font-size:13px;color:#888;margin-bottom:0.75rem;">Generate a set of realistic sample projects for testing the tracker, board, and metrics.</p>
+        <button class="btn-secondary" onclick="generateSampleProjects()">Generate sample projects</button>
       </div>
     </div>
 
@@ -1448,19 +1493,25 @@ function saveProject() {
   const name = (document.getElementById('df-__name__') || {}).value || 'Untitled';
   const lockedVals = {};
   LOCKED_FIELDS.forEach(f => { const el = document.getElementById('df-' + f.id); lockedVals[f.id] = el ? el.value : ''; });
+  const ptEl = document.getElementById('project-type-select');
+  const projectTypeId = ptEl ? ptEl.value : '';
+  const ptMapping = projectTypeMappings.find(x => x.id === projectTypeId);
+  const projectTypeLabel = ptMapping ? ptMapping.label : '';
   const proj = {
     id: Date.now(), name, detailVals, lockedVals,
     criteriaVals: vals, score, tier: tier.label,
     partial: false, status: 'Submitted',
     decisionNotes: '', revisitDate: '',
-    date: new Date().toLocaleDateString()
+    date: new Date().toLocaleDateString(),
+    projectType: projectTypeLabel, projectTypeId
   };
   if (editingProjectId) {
     // Update existing project in place, preserving status/notes/dates
     const idx = projects.findIndex(x => x.id == editingProjectId);
     if (idx !== -1) {
       const existing = projects[idx];
-      projects[idx] = { ...proj, id: existing.id, date: existing.date, status: existing.status, decisionNotes: existing.decisionNotes, revisitDate: existing.revisitDate };
+      const prevScore = existing.score;
+      projects[idx] = { ...proj, id: existing.id, date: existing.date, status: existing.status, decisionNotes: existing.decisionNotes, revisitDate: existing.revisitDate, previousScore: prevScore };
     }
     editingProjectId = null;
     const saveBtn = document.querySelector('#tab-intake .btn-primary-lg');
@@ -1470,6 +1521,7 @@ function saveProject() {
     clearForm();
   } else {
     projects.unshift(proj); persist();
+    renderSummaryMetrics();
     toast('Project saved!'); clearForm();
   }
 }
@@ -1495,9 +1547,98 @@ function setStatusFilter(s) {
   renderProjectList();
 }
 
+function getRevisitStatus(p) {
+  if ((p.status||'Submitted') !== 'Deferred' || !p.revisitDate) return null;
+  const parts = p.revisitDate.split('-');
+  if (parts.length !== 3) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const soon = new Date(today); soon.setDate(soon.getDate()+7);
+  const rd = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  if (rd < today) return 'overdue';
+  if (rd <= soon) return 'upcoming';
+  return null;
+}
+
+function filterToOverdue() {
+  setTrackerView('list');
+  setStatusFilter('Deferred');
+  document.getElementById('tab-tracker').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function filterToThisMonth() {
+  const today = new Date();
+  const m = today.getMonth(); const y = today.getFullYear();
+  setTrackerView('list');
+  activeStatusFilter = 'All';
+  buildStatusFilterBar();
+  // Render only this month's projects
+  const container = document.getElementById('projects-list');
+  const filtered = projects
+    .filter(p => { if (!p.date) return false; const d = new Date(p.date); return d.getMonth()===m && d.getFullYear()===y; })
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (!filtered.length) { container.innerHTML = '<div class="empty-state">No projects submitted this month.</div>'; return; }
+  container.innerHTML = '';
+  // Temporarily swap projects array to re-use renderProjectList logic
+  const allProjects = projects;
+  projects = filtered;
+  renderProjectList();
+  projects = allProjects;
+  document.getElementById('tab-tracker').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  toast(filtered.length + ' project' + (filtered.length !== 1 ? 's' : '') + ' submitted in ' + today.toLocaleString('default',{month:'long'}) + '. Click any status filter to reset.');
+}
+
+function filterToDecided() {
+  setTrackerView('list');
+  activeStatusFilter = 'All';
+  buildStatusFilterBar();
+  const container = document.getElementById('projects-list');
+  const filtered = projects
+    .filter(p => ['Accepted','Deferred','Passed'].includes(p.status))
+    .sort((a, b) => statusRank(a.status) - statusRank(b.status) || b.score - a.score);
+  if (!filtered.length) { container.innerHTML = '<div class="empty-state">No decided projects yet.</div>'; return; }
+  container.innerHTML = '';
+  const allProjects = projects;
+  projects = filtered;
+  renderProjectList();
+  projects = allProjects;
+  document.getElementById('tab-tracker').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  toast(filtered.length + ' decided project' + (filtered.length !== 1 ? 's' : '') + '. Click any status filter to reset.');
+}
+
 
 /* ── KANBAN BOARD ── */
 let trackerView = 'list';
+let kanbanSort = localStorage.getItem('pm_kanban_sort') || 'score';
+let kanbanTypeFilter = 'All';
+const TERMINAL_STATUSES = ['Accepted', 'Deferred', 'Passed'];
+let collapsedCols = JSON.parse(localStorage.getItem('pm_collapsed_cols') || '["Accepted","Deferred","Passed"]');
+
+function setKanbanSort(sort) {
+  kanbanSort = sort;
+  localStorage.setItem('pm_kanban_sort', sort);
+  document.getElementById('sort-btn-score').classList.toggle('active', sort === 'score');
+  document.getElementById('sort-btn-date').classList.toggle('active', sort === 'date');
+  renderKanban();
+}
+
+function setKanbanTypeFilter(type) {
+  kanbanTypeFilter = type;
+  // Update filter button states
+  document.querySelectorAll('.kanban-type-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === type);
+  });
+  renderKanban();
+}
+
+function toggleKanbanCol(status) {
+  if (collapsedCols.includes(status)) {
+    collapsedCols = collapsedCols.filter(s => s !== status);
+  } else {
+    collapsedCols.push(status);
+  }
+  localStorage.setItem('pm_collapsed_cols', JSON.stringify(collapsedCols));
+  renderKanban();
+}
 
 function setTrackerView(view) {
   trackerView = view;
@@ -1505,7 +1646,8 @@ function setTrackerView(view) {
   document.getElementById('board-view').style.display = view === 'board' ? 'block' : 'none';
   document.getElementById('view-btn-list').classList.toggle('active', view === 'list');
   document.getElementById('view-btn-board').classList.toggle('active', view === 'board');
-  if (view === 'board') renderKanban();
+  if (view === 'board') { kanbanTypeFilter = 'All'; renderKanban(); }
+  if (view === 'list') { buildStatusFilterBar(); renderProjectList(); }
 }
 
 function renderKanban() {
@@ -1513,38 +1655,99 @@ function renderKanban() {
   if (!board) return;
   board.innerHTML = '';
 
+  // Sync sort buttons
+  const sb = document.getElementById('sort-btn-score');
+  const db = document.getElementById('sort-btn-date');
+  if (sb) sb.classList.toggle('active', kanbanSort === 'score');
+  if (db) db.classList.toggle('active', kanbanSort === 'date');
+
+  // Build type filter buttons
+  const typeFilterContainer = document.getElementById('kanban-type-filters');
+  if (typeFilterContainer) {
+    const types = ['All', ...projectTypeMappings.map(pt => pt.label)];
+    typeFilterContainer.innerHTML = types.length > 1
+      ? '<span class="kanban-sort-label">Type</span>' + types.map(t =>
+          `<button class="kanban-sort-btn kanban-type-btn${t === kanbanTypeFilter ? ' active' : ''}" data-type="${t}" onclick="setKanbanTypeFilter('${t}')">${t}</button>`
+        ).join('')
+      : '';
+  }
+
   STATUS_ORDER.forEach(status => {
     const sc = STATUS_CONFIG[status];
-    const colProjects = projects.filter(p => (p.status || 'Submitted') === status)
-                                .sort((a, b) => b.score - a.score);
+    const isCollapsed = collapsedCols.includes(status);
+    const isTerminal = TERMINAL_STATUSES.includes(status);
+
+    const colProjects = projects
+      .filter(p => (p.status || 'Submitted') === status)
+      .filter(p => kanbanTypeFilter === 'All' || (p.projectType || '') === kanbanTypeFilter)
+      .sort((a, b) => kanbanSort === 'date'
+        ? new Date(b.date) - new Date(a.date)
+        : b.score - a.score);
 
     const col = document.createElement('div');
-    col.className = 'kanban-col';
+    col.className = 'kanban-col' + (isCollapsed ? ' collapsed' : '');
     col.dataset.status = status;
 
-    col.innerHTML = `
-      <div class="kanban-col-header">
-        <span class="kanban-col-title" style="color:${sc.color};">${status}</span>
-        <span class="kanban-col-count">${colProjects.length}</span>
-      </div>
-      <div class="kanban-cards" id="kanban-col-${status.replace(' ','-')}">
-        ${colProjects.length === 0 ? '<div class="kanban-empty">No projects</div>' : ''}
-        ${colProjects.map(p => buildKanbanCard(p)).join('')}
-      </div>`;
+    const toggleIcon = isCollapsed ? '»' : '«';
 
-    // Drag events on column
+    col.innerHTML = `
+      <div class="kanban-col-header" onclick="toggleKanbanCol('${status}')">
+        <span class="kanban-col-title" style="color:${sc.color};">${status}</span>
+        ${isCollapsed
+          ? `<span class="kanban-col-count">${colProjects.length}</span>`
+          : `<div style="display:flex;align-items:center;gap:6px;">
+               <span class="kanban-col-count">${colProjects.length}</span>
+               <span class="kanban-col-toggle">${toggleIcon}</span>
+             </div>`
+        }
+      </div>
+      ${!isCollapsed ? `
+      <div class="kanban-cards" id="kanban-col-${status.replace(' ','-')}">
+        ${colProjects.length === 0 ? '<div class="kanban-empty" style="border:2px dashed #e5e5e5;border-radius:8px;margin:4px;">No projects</div>' : ''}
+        ${colProjects.map(p => buildKanbanCard(p)).join('')}
+      </div>` : ''}`;
+
+    // Drag-drop with auto-expand for collapsed columns
+    col.addEventListener('dragenter', e => {
+      e.preventDefault();
+      if (isCollapsed && !col.classList.contains('drag-expanding')) {
+        col.classList.remove('collapsed');
+        col.classList.add('drag-expanding');
+        // Inject cards once so there's a drop surface
+        const cards = document.createElement('div');
+        cards.className = 'kanban-cards';
+        cards.id = 'kanban-col-' + status.replace(' ', '-');
+        cards.innerHTML = colProjects.length === 0
+          ? '<div class="kanban-empty" style="border:2px dashed #185FA5;border-radius:8px;margin:4px;color:#185FA5;">Drop here</div>'
+          : colProjects.map(p => buildKanbanCard(p)).join('');
+        col.appendChild(cards);
+      }
+      col.classList.add('drag-over');
+    });
     col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
-    col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+    col.addEventListener('dragleave', e => {
+      if (!col.contains(e.relatedTarget)) {
+        col.classList.remove('drag-over');
+        // Re-collapse if we auto-expanded it
+        if (col.classList.contains('drag-expanding')) {
+          col.classList.add('collapsed');
+          col.classList.remove('drag-expanding');
+          const cards = col.querySelector('.kanban-cards');
+          if (cards) cards.remove();
+        }
+      }
+    });
     col.addEventListener('drop', e => {
       e.preventDefault();
       col.classList.remove('drag-over');
+      col.classList.remove('drag-expanding');
       const id = e.dataTransfer.getData('text/plain');
       const p = projects.find(x => x.id == id);
       if (p && p.status !== status) {
         p.status = status; persist();
         renderKanban();
         buildStatusFilterBar();
-        renderDeferredReminders();
+        renderSummaryMetrics();
         toast('Moved to ' + status + '.');
       }
     });
@@ -1555,18 +1758,40 @@ function renderKanban() {
 
 function buildKanbanCard(p) {
   const tier = getTier(p.score);
-  const sc = STATUS_CONFIG[p.status || 'Submitted'];
   const customer = (p.lockedVals && p.lockedVals['__customer__']) || '';
-  const submitter = (p.lockedVals && p.lockedVals['__submitter__']) || '';
-  return `<div class="kanban-card" draggable="true" data-id="${p.id}"
+  const rs = getRevisitStatus(p);
+  const borderStyle = rs === 'overdue'
+    ? 'border-left:3px solid #E24B4A;border-radius:0 8px 8px 0;padding-left:9px;'
+    : rs === 'upcoming'
+    ? 'border-left:3px solid #FAC775;border-radius:0 8px 8px 0;padding-left:9px;'
+    : '';
+  // Score pill colors by tier
+  const tierPillColors = {
+    'Pursue':   { bg:'#EAF3DE', color:'#27500A' },
+    'Evaluate': { bg:'#FAEEDA', color:'#633806' },
+    'Defer':    { bg:'#FAEEDA', color:'#854F0B' },
+    'Pass':     { bg:'#FCEBEB', color:'#791F1F' },
+  };
+  const pc = tierPillColors[p.tier] || tierPillColors['Pass'];
+  return `<div class="kanban-card" draggable="true" data-id="${p.id}" style="${borderStyle}"
     ondragstart="event.dataTransfer.setData('text/plain','${p.id}');this.classList.add('dragging')"
     ondragend="this.classList.remove('dragging')"
     onclick="openKanbanCard('${p.id}')">
-    <div class="kanban-card-name">${p.name}</div>
-    <div class="kanban-card-meta">${customer}${customer && submitter ? ' · ' : ''}${submitter}</div>
-    <div class="kanban-card-footer">
-      <span class="proj-tier ${tier.cls}" style="font-size:11px;">${p.tier}</span>
-      <span style="font-size:12px;font-weight:500;color:${getTierColor(p.score)};">${p.score}<span style="font-size:10px;color:#aaa;">/100</span></span>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+      <div style="font-size:13px;font-weight:500;color:#1a1a1a;line-height:1.3;">${p.name}</div>
+      <span style="font-size:12px;font-weight:500;background:${pc.bg};color:${pc.color};border-radius:4px;padding:2px 7px;white-space:nowrap;flex-shrink:0;">${p.score}/100</span>
+    </div>
+    <div style="font-size:12px;color:#888;margin-bottom:8px;">${customer || 'No account'}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:11px;color:#888;">${(p.lockedVals && p.lockedVals['__submitter__']) || ''}</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        ${(p.previousScore !== undefined && p.previousScore !== p.score)
+          ? (p.score > p.previousScore
+            ? `<span style="font-size:11px;font-weight:500;color:#3B6D11;">↑ ${p.score - p.previousScore}</span>`
+            : `<span style="font-size:11px;font-weight:500;color:#a32d2d;">↓ ${p.previousScore - p.score}</span>`)
+          : ''}
+        <span style="font-size:11px;color:#bbb;">${p.date || ''}</span>
+      </div>
     </div>
   </div>`;
 }
@@ -1599,6 +1824,31 @@ function openKanbanCard(id) {
     const val = p.detailVals ? (p.detailVals[f.id] || '') : '';
     if (!val) return '';
     return `<div style="padding:6px 0;border-bottom:1px solid #f0f0ee;"><div style="font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">${f.label}</div><div style="font-size:13px;color:#1a1a1a;">${val}</div></div>`;
+  }).filter(Boolean).join('');
+
+  const totalWeight = criteria.reduce((s, c) => s + getWeight(c.id), 0);
+  const savedKeys = p.criteriaVals ? Object.keys(p.criteriaVals) : [];
+  const criteriaRows = criteria.map((c, ci) => {
+    if (!p.criteriaVals) return '';
+    let val = p.criteriaVals[c.id];
+    if (val === null || val === undefined) {
+      if (savedKeys[ci] !== undefined) val = p.criteriaVals[savedKeys[ci]];
+    }
+    if (val === null || val === undefined) return '';
+    const numVal = Number(val);
+    if (isNaN(numVal)) return '';
+    const opt = c.options.find(o => Number(o.score) === numVal);
+    const pct = totalWeight > 0 ? Math.round((getWeight(c.id) / totalWeight) * 100) : 0;
+    return `<div style="padding:6px 0;border-bottom:1px solid #f0f0ee;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div style="flex:1;">
+        <div style="font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">${c.label} <span style="font-weight:400;text-transform:none;">(${pct}%)</span></div>
+        <div style="font-size:13px;color:#1a1a1a;">${opt ? opt.label : numVal}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:11px;color:#888;margin-bottom:2px;">Score</div>
+        <div style="font-size:13px;font-weight:500;color:#1a1a1a;">${numVal}/10</div>
+      </div>
+    </div>`;
   }).filter(Boolean).join('');
 
   const overlay = document.createElement('div');
@@ -1642,6 +1892,11 @@ function openKanbanCard(id) {
       <details style="margin-bottom:12px;">
         <summary style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;padding:4px 0;user-select:none;list-style:none;display:flex;align-items:center;gap:6px;"><span style="font-size:10px;">▶</span> Submission details</summary>
         <div style="margin-top:4px;">${lockedRows}${detailRows}</div>
+      </details>` : ''}
+      ${criteriaRows ? `
+      <details style="margin-bottom:12px;">
+        <summary style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;padding:4px 0;user-select:none;list-style:none;display:flex;align-items:center;gap:6px;"><span style="font-size:10px;">▶</span> Scoring criteria</summary>
+        <div style="margin-top:4px;">${criteriaRows}</div>
       </details>` : ''}
 
       <div class="modal-btns">
@@ -1708,17 +1963,24 @@ function renderSummaryMetrics() {
   }).length;
 
   const overdueCard = overdue > 0
-    ? `<div class="metric-card alert"><div class="metric-label">Overdue revisits</div><div class="metric-value">${overdue}</div><div class="metric-sub">${upcoming > 0 ? upcoming + ' due this week' : 'Needs attention'}</div></div>`
+    ? `<div class="metric-card alert" style="cursor:pointer;" onclick="filterToOverdue()" title="Click to view overdue projects"><div class="metric-label">Overdue revisits ↗</div><div class="metric-value">${overdue}</div><div class="metric-sub">${upcoming > 0 ? upcoming + ' due this week' : 'Needs attention'}</div></div>`
     : upcoming > 0
-    ? `<div class="metric-card warn"><div class="metric-label">Overdue revisits</div><div class="metric-value">${upcoming}</div><div class="metric-sub">Due within 7 days</div></div>`
+    ? `<div class="metric-card warn" style="cursor:pointer;" onclick="filterToOverdue()" title="Click to view upcoming revisits"><div class="metric-label">Overdue revisits ↗</div><div class="metric-value">${upcoming}</div><div class="metric-sub">Due within 7 days</div></div>`
     : `<div class="metric-card"><div class="metric-label">Overdue revisits</div><div class="metric-value">0</div><div class="metric-sub">All clear</div></div>`;
 
-  // Stat cards
+  // Stat cards — build clickable variants as variables to avoid quote nesting issues
+  const monthName = new Date().toLocaleString('default', {month:'long'});
+  const thisMonthCard = thisMonthCount > 0
+    ? `<div class="metric-card" style="cursor:pointer;" onclick="filterToThisMonth()" title="Show this month"><div class="metric-label">This month ↗</div><div class="metric-value">${thisMonthCount}</div><div class="metric-sub">${monthName}</div></div>`
+    : `<div class="metric-card"><div class="metric-label">This month</div><div class="metric-value">${thisMonthCount}</div><div class="metric-sub">${monthName}</div></div>`;
+  const decidedCard = decided.length > 0
+    ? `<div class="metric-card" style="cursor:pointer;" onclick="filterToDecided()" title="Show decided projects"><div class="metric-label">Acceptance rate ↗</div><div class="metric-value">${acceptRate !== null ? acceptRate + '%' : '—'}</div><div class="metric-sub">${decided.length} decided</div></div>`
+    : `<div class="metric-card"><div class="metric-label">Acceptance rate</div><div class="metric-value">—</div><div class="metric-sub">No decisions yet</div></div>`;
   const statsHtml = `<div class="metrics-grid">
-    <div class="metric-card"><div class="metric-label">Total projects</div><div class="metric-value">${total}</div><div class="metric-sub">All time</div></div>
-    <div class="metric-card"><div class="metric-label">This month</div><div class="metric-value">${thisMonthCount}</div><div class="metric-sub">${new Date().toLocaleString('default',{month:'long'})}</div></div>
+    <div class="metric-card" style="cursor:pointer;" onclick="setTrackerView('list');setStatusFilter('All');" title="Show all projects"><div class="metric-label">Total projects ↗</div><div class="metric-value">${total}</div><div class="metric-sub">All time</div></div>
+    ${thisMonthCard}
     <div class="metric-card"><div class="metric-label">Avg score</div><div class="metric-value">${avgScore}</div><div class="metric-sub">Out of 100</div></div>
-    <div class="metric-card"><div class="metric-label">Acceptance rate</div><div class="metric-value">${acceptRate !== null ? acceptRate + '%' : '—'}</div><div class="metric-sub">${decided.length ? decided.length + ' decided' : 'No decisions yet'}</div></div>
+    ${decidedCard}
     ${overdueCard}
   </div>`;
 
@@ -1855,7 +2117,13 @@ function renderProjectList() {
       : '<div class="empty-state">No projects saved yet. Use the "New request" tab to add one.</div>';
     return;
   }
-  filtered.sort((a, b) => statusRank(a.status) - statusRank(b.status) || b.score - a.score);
+  filtered.sort((a, b) => {
+    // Overdue deferred always first
+    const ra = getRevisitStatus(a), rb = getRevisitStatus(b);
+    const overdueRank = s => s === 'overdue' ? 0 : s === 'upcoming' ? 1 : 2;
+    if (overdueRank(ra) !== overdueRank(rb)) return overdueRank(ra) - overdueRank(rb);
+    return statusRank(a.status) - statusRank(b.status) || b.score - a.score;
+  });
   container.innerHTML = '';
   filtered.forEach((p, i) => {
     const tier = getTier(p.score);
@@ -1865,7 +2133,9 @@ function renderProjectList() {
     const customerVal = (p.lockedVals && p.lockedVals['__customer__']) || '';
 
     const row = document.createElement('div');
-    row.style.cssText = 'border-bottom:1px solid #f0f0ee;';
+    const revisitStatus = getRevisitStatus(p);
+    const borderLeft = revisitStatus === 'overdue' ? 'border-left:3px solid #E24B4A;' : revisitStatus === 'upcoming' ? 'border-left:3px solid #FAC775;' : '';
+    row.style.cssText = 'border-bottom:1px solid #f0f0ee;' + borderLeft + (borderLeft ? 'padding-left:8px;' : '');
     // Build submission details
     const lockedRows = LOCKED_FIELDS.map(f => {
       const val = p.lockedVals ? (p.lockedVals[f.id] || '') : '';
@@ -1886,20 +2156,28 @@ function renderProjectList() {
 
     // Build criteria rows with weighted score contribution
     const totalWeight = criteria.reduce((s, c) => s + getWeight(c.id), 0);
-    const criteriaRows = criteria.map(c => {
-      const val = p.criteriaVals ? p.criteriaVals[c.id] : null;
+    const savedKeys = p.criteriaVals ? Object.keys(p.criteriaVals) : [];
+    const criteriaRows = criteria.map((c, ci) => {
+      if (!p.criteriaVals) return '';
+      // 1. Try exact ID match
+      let val = p.criteriaVals[c.id];
+      // 2. Fall back to positional match (for legacy saved projects with old IDs)
+      if (val === null || val === undefined) {
+        if (savedKeys[ci] !== undefined) val = p.criteriaVals[savedKeys[ci]];
+      }
       if (val === null || val === undefined) return '';
-      const opt = c.options.find(o => o.score === val);
+      const numVal = Number(val);
+      if (isNaN(numVal)) return '';
+      const opt = c.options.find(o => Number(o.score) === numVal);
       const pct = totalWeight > 0 ? Math.round((getWeight(c.id) / totalWeight) * 100) : 0;
-      const contribution = totalWeight > 0 ? Math.round((val * getWeight(c.id) / totalWeight) * 10) : 0;
       return `<div style="padding:8px 0;border-bottom:1px solid #f0f0ee;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
         <div style="flex:1;">
           <div style="font-size:11px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">${c.label} <span style="font-weight:400;text-transform:none;letter-spacing:0;">(${pct}% of score)</span></div>
-          <div style="font-size:13px;color:#1a1a1a;">${opt ? opt.label : val}</div>
+          <div style="font-size:13px;color:#1a1a1a;">${opt ? opt.label : numVal}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-size:11px;color:#888;margin-bottom:2px;">Score</div>
-          <div style="font-size:13px;font-weight:500;color:#1a1a1a;">${val}/10</div>
+          <div style="font-size:13px;font-weight:500;color:#1a1a1a;">${numVal}/10</div>
         </div>
       </div>`;
     }).filter(Boolean).join('');
@@ -1918,9 +2196,10 @@ function renderProjectList() {
       <div class="project-row" style="cursor:pointer;" id="proj-row-${p.id}" onclick="toggleProjectDetail('${p.id}')">
         <div style="flex:1;">
           <div class="proj-name">${p.name}${p.partial ? ' <span style="font-size:11px;color:#aaa;font-weight:400;">(partial)</span>' : ''}</div>
-          <div class="proj-meta">${customerVal || 'No account'} · ${submitter} · ${p.date}</div>
+          <div class="proj-meta">${customerVal || 'No account'} · ${submitter} · ${p.date}${(p.previousScore !== undefined && p.previousScore !== p.score) ? (p.score > p.previousScore ? ' · <span style="color:#3B6D11;font-weight:500;">↑ ' + (p.score - p.previousScore) + '</span>' : ' · <span style="color:#a32d2d;font-weight:500;">↓ ' + (p.previousScore - p.score) + '</span>') : ''}</div>
         </div>
         <span class="status-badge" id="proj-status-badge-${p.id}" style="background:${sc.bg};color:${sc.color};">${status}</span>
+        ${revisitStatus === 'overdue' ? '<span style="font-size:11px;font-weight:500;background:#FCEBEB;color:#a32d2d;border-radius:6px;padding:2px 8px;margin-left:4px;">Overdue</span>' : revisitStatus === 'upcoming' ? '<span style="font-size:11px;font-weight:500;background:#FAEEDA;color:#633806;border-radius:6px;padding:2px 8px;margin-left:4px;">Due soon</span>' : ''}
         <span class="proj-tier ${tier.cls}" style="margin-left:6px;">${p.tier}</span>
         <div style="font-size:15px;font-weight:500;min-width:56px;text-align:right;color:${getTierColor(p.score)}">${p.score}<span style="font-size:11px;color:#aaa;font-weight:400;">/100</span></div>
         <span style="font-size:14px;color:#bbb;width:20px;text-align:center;flex-shrink:0;" id="proj-chev-${p.id}">▾</span>
@@ -1982,6 +2261,7 @@ function updateProjectStatus(id, status) {
   const sc = STATUS_CONFIG[status] || STATUS_CONFIG['Submitted'];
   if (badge) { badge.textContent = status; badge.style.background = sc.bg; badge.style.color = sc.color; }
   buildStatusFilterBar();
+  renderSummaryMetrics();
   toast('Status updated to ' + status + '.');
 }
 
@@ -1989,6 +2269,7 @@ function updateProjectField(id, field, val) {
   const p = projects.find(x => x.id == id); if (!p) return;
   p[field] = val; persist();
   if (field === 'decisionNotes') toast('Notes saved.');
+  renderSummaryMetrics();
 }
 
 function updateRevisitDate(id) {
@@ -1999,6 +2280,7 @@ function updateRevisitDate(id) {
   const displayVal = (y && m && d) ? monthNames()[parseInt(m)-1] + ' ' + parseInt(d) + ', ' + y : '';
   const p = projects.find(x => x.id == id); if (!p) return;
   p.revisitDate = val; persist();
+  renderSummaryMetrics();
   if (val) toast('Revisit date set to ' + displayVal + '.');
 }
 
@@ -2010,6 +2292,22 @@ function deleteProject(id) {
 }
 
 let editingProjectId = null;
+
+function prefillCriteria(p) {
+  if (!p.criteriaVals) return;
+  const savedKeys = Object.keys(p.criteriaVals);
+  criteria.forEach((c, ci) => {
+    let val = p.criteriaVals[c.id];
+    if (val === null || val === undefined) {
+      if (savedKeys[ci] !== undefined) val = p.criteriaVals[savedKeys[ci]];
+    }
+    if (val !== null && val !== undefined) {
+      const el = document.getElementById('dd-' + c.id);
+      if (el) el.value = Number(val);
+    }
+  });
+  updateScore();
+}
 
 function editProject(id) {
   const p = projects.find(x => x.id == id); if (!p) return;
@@ -2030,30 +2328,31 @@ function editProject(id) {
     if (el && p.detailVals) el.value = p.detailVals[f.id] || '';
   });
 
-  // Pre-fill project type
+  // Pre-fill project type — match by ID first, then by label
   const ptSel = document.getElementById('project-type-select');
-  if (ptSel && p.projectType) {
-    const pt = projectTypeMappings.find(x => x.label === p.projectType);
-    if (pt) { ptSel.value = pt.id; onProjectTypeChange(pt.id); }
+  const ptMatch = projectTypeMappings.find(x =>
+    (p.projectTypeId && x.id === p.projectTypeId) ||
+    (p.projectType && x.label === p.projectType)
+  );
+  if (ptSel && ptMatch) {
+    // Known project type — set it and build the filtered criteria
+    ptSel.value = ptMatch.id;
+    onProjectTypeChange(ptMatch.id);
   } else if (ptSel) {
-    // Pick first type if only one exists, else leave blank
+    // No project type stored (old project) — clear select but show ALL criteria
     ptSel.value = '';
     activeProjectTypeId = null;
+    // Temporarily bypass the "select a type first" gate so criteria render
+    const savedMappings = projectTypeMappings;
+    projectTypeMappings = [];
     buildCriteriaFields();
+    projectTypeMappings = savedMappings;
   }
 
-  // Pre-fill criteria
-  setTimeout(() => {
-    if (p.criteriaVals) {
-      Object.entries(p.criteriaVals).forEach(([cid, val]) => {
-        const el = document.getElementById('dd-' + cid);
-        if (el && val !== null && val !== undefined) el.value = val;
-      });
-    }
-    updateScore();
-  }, 50);
+  // Fill criteria immediately — buildCriteriaFields is sync so dropdowns exist now
+  prefillCriteria(p);
 
-  // Update save button to show we're editing
+  // Update save button
   const saveBtn = document.querySelector('#tab-intake .btn-primary-lg');
   if (saveBtn) {
     saveBtn.textContent = 'Update project';
@@ -3459,6 +3758,24 @@ function resetToForm() {
 buildDetailFields();
 buildCriteriaFields();
 buildProjectTypeSelect();
+
+// Read ?r= param and pre-fill + lock submitter fields
+(function() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const r = params.get('r');
+    if (!r) return;
+    const data = JSON.parse(atob(r));
+    if (data.name) {
+      const el = document.getElementById('df-__submitter__');
+      if (el) { el.value = data.name; el.readOnly = true; el.style.background = '#f5f5f3'; el.style.color = '#888'; el.style.cursor = 'default'; }
+    }
+    if (data.email) {
+      const el = document.getElementById('df-__email__');
+      if (el) { el.value = data.email; el.readOnly = true; el.style.background = '#f5f5f3'; el.style.color = '#888'; el.style.cursor = 'default'; }
+    }
+  } catch(e) { /* invalid param — ignore */ }
+})();
 <\/script>
 </body>
 </html>`;
@@ -3509,11 +3826,15 @@ function importSubmission() {
     if (!proj.lockedVals) proj.lockedVals = {};
     LOCKED_FIELDS.forEach(f => {
       if (!proj.lockedVals[f.id]) {
-        // Try to find matching value in detailVals by id or label
         const byId = proj.detailVals ? proj.detailVals[f.id] : '';
         proj.lockedVals[f.id] = byId || '';
       }
     });
+    // Resolve projectTypeId from label if not already set
+    if (proj.projectType && !proj.projectTypeId) {
+      const ptMatch = projectTypeMappings.find(x => x.label === proj.projectType);
+      if (ptMatch) proj.projectTypeId = ptMatch.id;
+    }
     // Avoid duplicates by id
     if (projects.some(p => p.id === proj.id)) {
       if (!confirm('This submission appears to already be in your tracker. Import it again?')) {
@@ -3531,6 +3852,128 @@ function importSubmission() {
   }
 }
 
+
+
+
+/* ── REP LINKS ── */
+const INTAKE_URL = 'https://nickporterfieldfullsteam.github.io/product-intake-scorecard/intake';
+
+function generateRepLink() {
+  const name = (document.getElementById('rep-link-name').value || '').trim();
+  const email = (document.getElementById('rep-link-email').value || '').trim();
+  if (!name || !email) { toast('Please enter both a name and email.'); return; }
+  const payload = btoa(JSON.stringify({ name, email }));
+  const url = INTAKE_URL + '?r=' + encodeURIComponent(payload);
+  const output = document.getElementById('rep-link-output');
+  const urlEl = document.getElementById('rep-link-url');
+  if (output) output.style.display = 'block';
+  if (urlEl) urlEl.value = url;
+}
+
+function copyRepLink() {
+  const urlEl = document.getElementById('rep-link-url');
+  if (!urlEl) return;
+  navigator.clipboard.writeText(urlEl.value).then(() => toast('Link copied to clipboard!'));
+}
+
+/* ── SAMPLE DATA GENERATOR ── */
+function generateSampleProjects() {
+  // Note: adds to existing projects — use 'Clear all saved projects' in Danger Zone to reset
+
+  const firstPt = projectTypeMappings[0] || { id: '', label: '' };
+
+  const reps = ['Sarah Chen', 'Marcus Webb', 'Priya Patel', 'Jordan Lee', 'Tom Nguyen', 'Dana Flores'];
+  const companies = ['Apex Logistics', 'Summit Health', 'Clearview Media', 'Ironwood Financial', 'Nexus Retail', 'Bridgepoint Law', 'Harbor Analytics', 'Crestline Tech'];
+  const domains = ['apex.com', 'summithealth.org', 'clearviewmedia.co', 'ironwoodfinancial.com', 'nexusretail.com', 'bridgepointlaw.com', 'harboranalytics.io', 'crestlinetech.com'];
+
+  // Build criteria vals using all criteria (not filtered by type)
+  const sampleCriteriaVals = () => {
+    const vals = {};
+    if (!criteria.length) return vals;
+    criteria.forEach(c => {
+      const opts = c.options;
+      if (!opts || !opts.length) return;
+      vals[c.id] = opts[Math.floor(Math.random() * opts.length)].score;
+    });
+    return vals;
+  };
+
+  const makeDate = (daysAgo) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    return d.toLocaleDateString();
+  };
+
+  const makeRevisit = (daysFromNow) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysFromNow);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  };
+
+  const samples = [
+    { name: 'Bulk data export API', company: companies[0], rep: reps[0], score: 84, status: 'Submitted', daysAgo: 2, ptLabel: firstPt.label, notes: '' },
+    { name: 'SSO / SAML integration', company: companies[1], rep: reps[1], score: 76, status: 'Under Review', daysAgo: 6, ptLabel: firstPt.label, notes: 'Discussing scope with engineering' },
+    { name: 'Custom reporting dashboard', company: companies[2], rep: reps[2], score: 91, status: 'Accepted', daysAgo: 14, ptLabel: firstPt.label, notes: 'High-value account, strong strategic fit. Adding to Q3 roadmap.' },
+    { name: 'Mobile app (iOS & Android)', company: companies[3], rep: reps[3], score: 58, status: 'Deferred', daysAgo: 21, ptLabel: firstPt.label, notes: 'Not enough demand yet. Revisit when 10+ accounts request it.', revisitDays: 45 },
+    { name: 'Zapier integration', company: companies[4], rep: reps[0], score: 43, status: 'Passed', daysAgo: 30, ptLabel: firstPt.label, notes: 'Low strategic fit. Pointed rep toward existing API documentation.' },
+    { name: 'Webhook notifications', company: companies[5], rep: reps[4], score: 72, status: 'Submitted', daysAgo: 1, ptLabel: firstPt.label, notes: '' },
+    { name: 'Multi-tenant permissions', company: companies[6], rep: reps[5], score: 88, status: 'Under Review', daysAgo: 4, ptLabel: firstPt.label, notes: 'Three enterprise accounts requesting this. Scheduling design review.' },
+    { name: 'PDF invoice generation', company: companies[7], rep: reps[2], score: 61, status: 'Deferred', daysAgo: 18, ptLabel: firstPt.label, notes: 'Low effort but low priority. Revisit next quarter.', revisitDays: -5 },
+    { name: 'Advanced search & filtering', company: companies[0], rep: reps[1], score: 79, status: 'Accepted', daysAgo: 45, ptLabel: firstPt.label, notes: 'Widely requested. Scoped and approved.' },
+    { name: 'White-label branding', company: companies[3], rep: reps[3], score: 35, status: 'Passed', daysAgo: 60, ptLabel: firstPt.label, notes: 'Outside current product direction.' },
+  ];
+
+  // Use second project type if available for variety
+  if (projectTypeMappings.length > 1) {
+    samples[2].ptLabel = projectTypeMappings[1].label;
+    samples[5].ptLabel = projectTypeMappings[1].label;
+    samples[8].ptLabel = projectTypeMappings[1].label;
+  }
+  if (projectTypeMappings.length > 2) {
+    samples[4].ptLabel = projectTypeMappings[2].label;
+    samples[9].ptLabel = projectTypeMappings[2].label;
+  }
+
+  const newProjects = samples.map((s, i) => {
+    const pt = projectTypeMappings.find(x => x.label === s.ptLabel) || firstPt;
+    const cVals = sampleCriteriaVals();
+    const tier = getTier(s.score);
+    const repEmail = s.rep.toLowerCase().replace(' ', '.') + '@' + domains[i % domains.length];
+    return {
+      id: Date.now() + i,
+      name: s.name,
+      score: s.score,
+      tier: tier.label,
+      status: s.status,
+      decisionNotes: s.notes,
+      revisitDate: s.revisitDays ? makeRevisit(s.revisitDays) : '',
+      date: makeDate(s.daysAgo),
+      partial: false,
+      projectType: pt.label,
+      projectTypeId: pt.id,
+      criteriaVals: cVals,
+      detailVals: { },
+      lockedVals: {
+        '__name__': s.name,
+        '__customer__': s.company,
+        '__submitter__': s.rep,
+        '__email__': repEmail,
+      },
+    };
+  });
+
+  try {
+    projects = [...newProjects, ...projects];
+    persist();
+    renderTracker();
+    renderSummaryMetrics();
+    showTab('tracker');
+    toast(newProjects.length + ' sample projects added!');
+  } catch(err) {
+    alert('Error generating samples: ' + err.message);
+    console.error(err);
+  }
+}
 
 /* ── SETTINGS TAB ── */
 function buildSettingsEmailJS() {

@@ -5969,28 +5969,35 @@ async function signOut() {
 const DEFAULT_WORKSPACE_ID = '704582e1-229c-470f-9eed-9d650e100118';
 
 async function loadWorkspace(userId) {
+  console.log('[Arbiter] Loading workspace for user:', userId);
   const { data, error } = await _sb
     .from('workspace_members')
     .select('workspace_id, role, workspaces(id, name)')
     .eq('user_id', userId)
     .limit(1)
     .single();
+  if (error) console.error('[Arbiter] loadWorkspace error:', error);
   if (data) {
     currentWorkspaceId = data.workspace_id;
+    console.log('[Arbiter] Workspace from DB:', currentWorkspaceId);
     return data;
   }
   // Fallback to default workspace
   currentWorkspaceId = DEFAULT_WORKSPACE_ID;
+  console.log('[Arbiter] Using default workspace:', currentWorkspaceId);
   return null;
 }
 
 // Auth state listener — fires on every session change
 _sb.auth.onAuthStateChange(async (event, session) => {
+  console.log('[Arbiter] Auth event:', event, '| user:', session?.user?.email || 'none');
   if (session?.user) {
     currentUser = session.user;
     await loadWorkspace(session.user.id);
+    console.log('[Arbiter] Workspace loaded:', currentWorkspaceId);
     hideAuthGate();
     await init();
+    console.log('[Arbiter] Init complete. Projects:', projects.length);
   } else {
     showAuthGate();
   }

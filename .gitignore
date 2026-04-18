@@ -1,0 +1,28 @@
+# ── Dependencies ──────────────────────────────────────────────────
+node_modules/
+.npm/
+
+# ── Environment / secrets ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.test
+*.pem
+*.key
+
+# ── Playwright test artifacts (regenerated each run) ─────────────
+tests/test-results/
+tests/playwright-report/
+tests/playwright/.cache/
+
+# ── macOS ─────────────────────────────────────────────────────────
+.DS_Store
+._*
+
+# ── Editor / IDE ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ── OS / misc ────────────────────────────────────────────────────
+Thumbs.db

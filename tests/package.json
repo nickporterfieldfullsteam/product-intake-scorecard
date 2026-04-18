@@ -1,0 +1,28 @@
+{
+  "name": "arbiter-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright end-to-end tests for the Arbiter PM scorecard tool",
+  "scripts": {
+    "test": "playwright test",
+    "test:local": "TEST_TARGET=local playwright test",
+    "test:server": "TEST_TARGET=server playwright test",
+    "test:live": "TEST_TARGET=live playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:smoke": "playwright test smoke",
+    "test:phase2": "playwright test phase2",
+    "test:scorecard": "playwright test scorecard",
+    "test:tracker": "playwright test tracker",
+    "test:report": "playwright show-report",
+    "serve": "python3 -m http.server 8787 --directory ../",
+    "cleanup": "node scripts/cleanup-test-workspace.js",
+    "install:browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5"
+  }
+}

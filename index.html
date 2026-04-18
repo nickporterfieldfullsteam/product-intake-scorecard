@@ -720,6 +720,11 @@
     </div>
 
     <div class="section" style="border-color:#FCEBEB;">
+      <div class="section-title" style="color:#185FA5;margin-bottom:0.5rem;">Data migration</div>
+      <p style="font-size:13px;color:#888;margin-bottom:0.75rem;">If you have existing criteria, weights, and settings in this browser from before the Supabase migration, click below to push them up to the database.</p>
+      <div class="btn-row" style="margin-bottom:1.5rem;">
+        <button class="btn-secondary" onclick="migrateFromLocalStorage()">Push localStorage config to Supabase</button>
+      </div>
       <div class="section-title" style="color:#a32d2d;">Danger zone</div>
       <p style="font-size:13px;color:#888;margin-bottom:1rem;">Permanently delete all saved projects from this device. This cannot be undone. Export a backup first if you need to keep the data.</p>
       <button class="btn-danger-inline" style="padding:8px 16px;border:1px solid #FCEBEB;border-radius:8px;" onclick="clearAllProjects()">Clear all saved projects</button>
@@ -1780,14 +1785,20 @@ async function sbUpsertProject(proj) {
     is_sample: proj.isSample || false
   };
   console.log('[Arbiter] Saving project:', proj.name, '| workspace:', currentWorkspaceId, '| user:', currentUser?.id);
-  if (proj.id && typeof proj.id === 'string' && proj.id.includes('-')) {
-    const { data, error } = await _sb.from('projects').update(row).eq('id', proj.id).select().single();
-    if (error) console.error('[Arbiter] Update error:', error);
-    return data ? { ...proj, ...mapDbProject(data) } : proj;
-  } else {
-    const { data, error } = await _sb.from('projects').insert(row).select().single();
-    if (error) console.error('[Arbiter] Insert error:', error);
-    return data ? { ...proj, ...mapDbProject(data) } : proj;
+  console.log('[Arbiter] Row payload:', JSON.stringify(row));
+  try {
+    if (proj.id && typeof proj.id === 'string' && proj.id.includes('-')) {
+      const { data, error } = await _sb.from('projects').update(row).eq('id', proj.id).select().single();
+      console.log('[Arbiter] Update result:', JSON.stringify(data), 'error:', JSON.stringify(error));
+      return data ? { ...proj, ...mapDbProject(data) } : proj;
+    } else {
+      const { data, error } = await _sb.from('projects').insert(row).select().single();
+      console.log('[Arbiter] Insert result:', JSON.stringify(data), 'error:', JSON.stringify(error));
+      return data ? { ...proj, ...mapDbProject(data) } : proj;
+    }
+  } catch(e) {
+    console.error('[Arbiter] Exception in sbUpsertProject:', e);
+    return proj;
   }
 }
 
@@ -5860,12 +5871,25 @@ function showTab(tab) {
   if (tab === 'settings') { buildSettingsEmailJS(); renderRepLinks(); }
 }
 
-buildDetailFields();
-buildCriteriaFields();
-buildProjectTypeSelect();
-updateScore();
-// Default to dashboard — defer so FAB and all DOM elements exist
-setTimeout(() => showTab('tracker'), 0);
+async function init() {
+  try {
+    await loadConfig();
+    await loadProjects();
+  } catch(e) {
+    console.error('[Arbiter] Init load error:', e);
+  }
+  try {
+    buildDetailFields();
+    buildCriteriaFields();
+    buildProjectTypeSelect();
+    updateScore();
+    renderSummaryMetrics();
+    setTimeout(() => showTab('tracker'), 0);
+    console.log('[Arbiter] Init complete. Projects:', projects.length);
+  } catch(e) {
+    console.error('[Arbiter] Init render error:', e);
+  }
+}
 
 // Pre-fill EmailJS credentials if not already set
 if (!localStorage.getItem('pm_emailjs')) {
@@ -5955,6 +5979,43 @@ async function sendMagicLink() {
   } else {
     successEl.style.display = 'block';
     document.getElementById('magic-btn').style.display = 'none';
+  }
+}
+
+async function migrateFromLocalStorage() {
+  const lsCriteria    = localStorage.getItem('pm_criteria');
+  const lsWeights     = localStorage.getItem('pm_weights');
+  const lsDetail      = localStorage.getItem('pm_detail_fields');
+  const lsThresholds  = localStorage.getItem('pm_thresholds');
+  const lsTypes       = localStorage.getItem('pm_project_types');
+  const lsPresets     = localStorage.getItem('pm_custom_presets');
+  const lsHelp        = localStorage.getItem('pm_sales_help');
+
+  if (!lsCriteria && !lsWeights) {
+    toast('No localStorage config found to migrate.');
+    return;
+  }
+
+  const update = {};
+  if (lsCriteria)   update.criteria              = JSON.parse(lsCriteria);
+  if (lsWeights)    update.weights               = JSON.parse(lsWeights);
+  if (lsDetail)     update.detail_fields         = JSON.parse(lsDetail);
+  if (lsThresholds) update.tier_thresholds       = JSON.parse(lsThresholds);
+  if (lsTypes)      update.project_type_mappings = JSON.parse(lsTypes);
+  if (lsPresets)    update.custom_presets        = JSON.parse(lsPresets);
+  if (lsHelp)       update.sales_help_topics     = JSON.parse(lsHelp);
+  update.updated_at = new Date().toISOString();
+
+  const { error } = await _sb.from('workspace_config')
+    .update(update)
+    .eq('workspace_id', currentWorkspaceId);
+
+  if (error) {
+    toast('Migration failed: ' + error.message);
+    console.error('[Arbiter] Migration error:', error);
+  } else {
+    toast('Config migrated! Reloading...');
+    setTimeout(() => location.reload(), 1500);
   }
 }
 

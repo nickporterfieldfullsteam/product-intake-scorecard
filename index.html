@@ -306,7 +306,7 @@
 
   /* ── PASSWORD GATE ── */
   /* ── AUTH SCREEN ── */
-  .auth-gate { position:fixed; inset:0; background:#f5f5f3; display:flex; align-items:center; justify-content:center; z-index:9999; padding:1rem; }
+  .auth-gate { position:fixed; top:0; left:0; right:0; bottom:40px; background:#f5f5f3; display:flex; align-items:center; justify-content:center; z-index:9999; padding:1rem; }
   .auth-card { background:#fff; border:1px solid #e5e5e5; border-radius:16px; padding:2.5rem 2rem; width:100%; max-width:380px; box-shadow:0 4px 24px rgba(0,0,0,0.06); }
   .auth-logo { display:flex; flex-direction:column; align-items:center; margin-bottom:2rem; }
   .auth-logo svg { margin-bottom:10px; }
@@ -342,7 +342,6 @@
       <svg width="72" viewBox="0 0 600 520" xmlns="http://www.w3.org/2000/svg" aria-label="Arbiter" style="margin-bottom:10px;"><path d="M299.5,0L300.5,0C312.62,22.206 596.29,514.733 599.999,518.5C599.502,518.555 600.496,519.944 599.999,519.999C586.124,521.54 586.143,519.999 425.5,519.999C402.663,476.501 212.278,153.055 213.74,149.585C215.734,144.853 271.252,51.701 299.5,0Z" fill="rgb(35,35,55)"/><path d="M174.5,519.999L1.5,519.999C5.384,505.899 97.29,355.328 96.205,351.588C94.754,346.584 8.021,202.453 11.494,201.478C19.582,199.209 19.75,201.486 116.5,201.486C182.503,201.486 183.471,200.957 185.084,203.744C191.921,215.556 269.754,350.04 270.226,351.582C271.114,354.481 194.017,482.647 174.5,519.999Z" fill="rgb(0,199,111)"/></svg>
       <h1 style="font-family:'Montserrat',sans-serif;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Arbiter</h1>
       <p>Make the call.</p>
-      <p id="login-build" style="font-size:10px;color:#ccc;margin-top:4px;"></p>
     </div>
 
     <!-- Sign in panel -->
@@ -1622,8 +1621,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const bd = 'v' + VERSION + ' · Build: ' + BUILD_STAMP;
   const fb = document.getElementById('footer-build');
   if (fb) fb.textContent = bd;
-  const lb = document.getElementById('login-build');
-  if (lb) lb.textContent = bd;
 });
 
 function toast(msg) {

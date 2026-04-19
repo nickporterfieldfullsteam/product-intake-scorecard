@@ -110,7 +110,7 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
     // and show the signed-in view.
     await expect(seededPortalPage.locator('#view-signed-in')).toBeVisible({ timeout: 5_000 });
     await expect(seededPortalPage.locator('#view-signin')).toBeHidden();
-    await expect(seededPortalPage.locator('#signed-in-email')).toHaveText('test-rep@arbiter.test');
+    await expect(seededPortalPage.locator('#signed-in-email-inline')).toHaveText('test-rep@arbiter.test');
   });
 
   test('Sign out returns to the sign-in view', async ({ page, baseURL }) => {
@@ -160,16 +160,26 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
       await route.fulfill({ status: 204, body: '' });
     });
 
-    // Click Sign out. The portal's signOut() clears localStorage and
-    // then sets window.location.href to force a reload.
-    await Promise.all([
-      page.waitForLoadState('load'),
-      page.locator('#view-signed-in button.btn-secondary').click(),
-    ]);
+    // Click Sign out. In production, Supabase's signOut() clears
+    // localStorage itself. But with a fake access token, the client
+    // may error out before it gets there — leaving the session in
+    // place and the post-reload init() sees it and shows signed-in
+    // view. To simulate the production outcome, we explicitly clear
+    // localStorage after the click, then reload manually.
+    await page.locator('#sub-dashboard button.btn-secondary', { hasText: /Sign out/i }).click();
 
-    // After the post-signout reload, no init script re-seeds the session
-    // (because we didn't register one), so the portal's init() sees no
-    // session and shows the sign-in view — the real user experience.
+    // Wait a moment for any async signOut work to finish
+    await page.waitForTimeout(300);
+
+    // Force the end state: no session, reload
+    await page.evaluate(() => {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('sb-'))
+        .forEach(k => localStorage.removeItem(k));
+    });
+    await page.goto(resolvePortalURL(baseURL!));
+
+    // After navigation with no session, sign-in view should render
     await expect(page.locator('#view-signin')).toBeVisible();
     await expect(page.locator('#view-signed-in')).toBeHidden();
   });

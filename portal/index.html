@@ -156,6 +156,151 @@
   }
 
   .hidden { display: none !important; }
+
+  /* ========================================================
+   * Form styles (dynamic intake) — mirrors the main app's
+   * intake tab visual language.
+   * ======================================================== */
+
+  /* Sections (project type, details, criteria) */
+  .section {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .section.accent-blue  { border-left: 3px solid #378ADD; border-radius: 0 12px 12px 0; }
+  .section.accent-amber { border-left: 3px solid #BA7517; border-radius: 0 12px 12px 0; }
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 1rem;
+  }
+
+  /* Form fields inside sections */
+  .form-field { margin-bottom: 1.1rem; }
+  .form-field:last-child { margin-bottom: 0; }
+  .form-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin-bottom: 6px;
+  }
+  .form-field label .required { color: #a72020; margin-left: 2px; }
+  .form-field .hint {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 6px;
+  }
+  .form-field input[type="text"],
+  .form-field input[type="email"],
+  .form-field input[type="number"],
+  .form-field textarea,
+  .form-field select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 11px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    color: #1a1a1a;
+  }
+  .form-field textarea { min-height: 70px; resize: vertical; }
+  .form-field input[readonly] {
+    background: #f5f5f3;
+    color: #888;
+    cursor: default;
+  }
+  .form-field input:focus,
+  .form-field textarea:focus,
+  .form-field select:focus { outline: none; border-color: #1a1a1a; }
+
+  /* Criterion card wrapper — each criterion is in its own subtle card */
+  .criterion-card {
+    background: #fafaf9;
+    border: 1px solid #f0f0ee;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  .criterion-card:last-child { margin-bottom: 0; }
+  .criterion-card .form-field { margin-bottom: 0; }
+
+  /* Project-type badge (shown after selection) */
+  .pt-badge {
+    display: inline-block;
+    background: #fafaf9;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #555;
+    margin-top: 10px;
+  }
+
+  /* Submit button area */
+  .submit-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 1rem;
+  }
+  .submit-row .btn-primary { flex: 1; }
+
+  /* Dashboard header (above form toggle) */
+  .dashboard-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .dashboard-bar .title {
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .dashboard-bar .title-sub {
+    font-size: 12px;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  /* "Coming soon" / empty states */
+  .empty-state {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+    padding: 2rem 1rem;
+    background: #fff;
+    border: 1px dashed #e5e5e5;
+    border-radius: 12px;
+  }
+
+  /* Toast (success after submit) */
+  .toast {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 500;
+  }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -202,16 +347,70 @@
     <p>Just a moment.</p>
   </div>
 
-  <div id="view-signed-in" class="card hidden">
-    <h2>You're signed in</h2>
-    <p>The rep dashboard is coming soon. For now, this confirms your authentication is working.</p>
+  <!-- Signed-in state: dashboard + form, swapped by JS -->
+  <div id="view-signed-in" class="hidden">
 
-    <div class="signed-in-info">
-      <div class="label">Signed in as</div>
-      <div class="value" id="signed-in-email">—</div>
+    <!-- Dashboard sub-view: list of submissions + Submit button -->
+    <div id="sub-dashboard">
+      <div class="dashboard-bar">
+        <div>
+          <div class="title">Your submissions</div>
+          <div class="title-sub">Signed in as <span id="signed-in-email-inline">—</span></div>
+        </div>
+        <button class="btn-primary" style="width:auto;padding:10px 16px;" onclick="showFormView()">+ Submit a request</button>
+      </div>
+
+      <div id="submissions-list">
+        <div class="empty-state">You have no submissions yet.<br>Click <strong>+ Submit a request</strong> to send one in.</div>
+      </div>
+
+      <div style="margin-top:1.5rem;text-align:right;">
+        <button class="btn-secondary" onclick="signOut()">Sign out</button>
+      </div>
     </div>
 
-    <button class="btn-secondary" onclick="signOut()">Sign out</button>
+    <!-- Form sub-view: the dynamic intake form -->
+    <div id="sub-form" class="hidden">
+      <div class="dashboard-bar">
+        <div>
+          <div class="title">Submit a request</div>
+          <div class="title-sub">All fields feed the product team's review.</div>
+        </div>
+        <button class="btn-secondary" onclick="showDashboardView()">← Back</button>
+      </div>
+
+      <!-- Project type -->
+      <div class="section" id="section-project-type">
+        <div class="section-title">Project type</div>
+        <div class="form-field" style="margin-bottom:0;">
+          <label>What type of project is this?</label>
+          <select id="form-project-type" onchange="onProjectTypeChange(this.value)">
+            <option value="">Select a project type…</option>
+          </select>
+          <div id="form-project-type-badge" class="pt-badge hidden"></div>
+        </div>
+      </div>
+
+      <!-- Project details (locked + configured) -->
+      <div class="section accent-blue" id="section-details">
+        <div class="section-title">Project details</div>
+        <div id="form-detail-fields"></div>
+      </div>
+
+      <!-- Scoring criteria -->
+      <div class="section accent-amber" id="section-criteria">
+        <div class="section-title">Scoring criteria</div>
+        <div id="form-criteria-fields"></div>
+      </div>
+
+      <!-- Submit bar -->
+      <div id="form-submit-status" class="status-msg hidden"></div>
+      <div class="submit-row">
+        <button id="btn-submit-request" class="btn-primary" onclick="submitRequest()">Submit request</button>
+        <button class="btn-secondary" onclick="showDashboardView()">Cancel</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -232,14 +431,21 @@
 
 <script>
 /* ============================================================
- * Arbiter Portal — Step B.1 (auth gate)
+ * Arbiter Portal — Step B.2.a (dynamic form rendering)
+ * Auth gate from B.1 + form rendered from live workspace_config.
+ * Submit handler is a placeholder; real submission lands in B.2.b.
  * ============================================================ */
 
-const VERSION = '0.1.0';
-const BUILD_STAMP = '2026-04-19 10:25:00 AM EST';
+const VERSION = '0.2.0';
+const BUILD_STAMP = '2026-04-19 05:22:05 PM EST';
 
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
+
+// For now we hardcode the production workspace. Long-term: derive this
+// from the rep's email via the reps table. One-workspace-per-deployment
+// for the foreseeable future.
+const WORKSPACE_ID = '704582e1-229c-470f-9eed-9d650e100118';
 
 const REDIRECT_TO = window.location.origin + window.location.pathname;
 
@@ -251,6 +457,21 @@ const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   }
 });
 
+/* --- Locked fields (same as main app — name/customer/submitter/email) --- */
+const LOCKED_FIELDS = [
+  { id: '__name__',      label: 'Project / feature name', placeholder: 'e.g. Bulk export API', type: 'text',  required: true },
+  { id: '__customer__',  label: 'Customer / prospect',    placeholder: 'Account name',          type: 'text',  required: true },
+  { id: '__submitter__', label: 'Submitted by',           placeholder: 'Your full name',        type: 'text',  required: true },
+  { id: '__email__',     label: 'Submitter email',        placeholder: 'your@email.com',        type: 'email', required: true },
+];
+
+/* --- Runtime state (populated from Supabase after sign-in) --- */
+let currentUser = null;
+let currentSession = null;
+let workspaceConfig = null;
+let activeProjectTypeId = null;
+
+/* --- View helpers --- */
 const views = ['signin', 'link-sent', 'loading', 'signed-in'];
 function showView(name) {
   views.forEach(v => {
@@ -272,6 +493,44 @@ function clearStatus() {
   el.textContent = '';
 }
 
+function showFormStatus(kind, msg) {
+  const el = document.getElementById('form-submit-status');
+  el.className = 'status-msg ' + kind;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+function clearFormStatus() {
+  const el = document.getElementById('form-submit-status');
+  el.classList.add('hidden');
+  el.textContent = '';
+}
+
+function showDashboardView() {
+  document.getElementById('sub-dashboard').classList.remove('hidden');
+  document.getElementById('sub-form').classList.add('hidden');
+  clearFormStatus();
+}
+function showFormView() {
+  document.getElementById('sub-dashboard').classList.add('hidden');
+  document.getElementById('sub-form').classList.remove('hidden');
+  clearFormStatus();
+  window.scrollTo(0, 0);
+}
+
+function toast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* --- Rep link token parsing (backwards-compat) --- */
 function parseRepToken() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -284,6 +543,7 @@ function parseRepToken() {
   }
 }
 
+/* --- Auth actions --- */
 async function sendMagicLink() {
   const emailEl = document.getElementById('signin-email');
   const email = (emailEl.value || '').trim().toLowerCase();
@@ -329,6 +589,202 @@ async function signOut() {
   window.location.href = window.location.pathname;
 }
 
+/* --- Fetch workspace config from Supabase --- */
+async function loadWorkspaceConfig() {
+  const { data, error } = await _sb
+    .from('workspace_config')
+    .select('criteria, detail_fields, project_type_mappings, custom_presets, weights')
+    .eq('workspace_id', WORKSPACE_ID)
+    .single();
+
+  if (error) {
+    console.error('[Portal] Failed to load workspace config:', error);
+    return null;
+  }
+  return data;
+}
+
+/* --- Form building --- */
+function buildProjectTypeSelect() {
+  const sel = document.getElementById('form-project-type');
+  if (!sel) return;
+  // Clear existing options after the default
+  sel.innerHTML = '<option value="">Select a project type…</option>';
+  const mappings = workspaceConfig?.project_type_mappings || [];
+  mappings.forEach(pt => {
+    const opt = document.createElement('option');
+    opt.value = pt.id;
+    opt.textContent = pt.label;
+    sel.appendChild(opt);
+  });
+}
+
+function onProjectTypeChange(id) {
+  activeProjectTypeId = id || null;
+  const badge = document.getElementById('form-project-type-badge');
+  if (id && workspaceConfig) {
+    const mapping = (workspaceConfig.project_type_mappings || []).find(pt => pt.id === id);
+    if (mapping?.presetKey) {
+      const preset = (workspaceConfig.custom_presets || []).find(p => p.key === mapping.presetKey);
+      if (preset) {
+        badge.textContent = 'Scoring preset: ' + preset.label;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    } else {
+      badge.classList.add('hidden');
+    }
+    buildCriteriaFields();
+  } else {
+    badge.classList.add('hidden');
+    buildCriteriaFields();
+  }
+}
+
+function buildDetailFields() {
+  const container = document.getElementById('form-detail-fields');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Locked fields first (name, customer, submitter, email)
+  const allFields = [...LOCKED_FIELDS, ...(workspaceConfig?.detail_fields || [])];
+
+  allFields.forEach(f => {
+    const div = document.createElement('div');
+    div.className = 'form-field';
+
+    const label = document.createElement('label');
+    label.setAttribute('for', 'df-' + f.id);
+    label.textContent = f.label;
+    if (f.required) {
+      const req = document.createElement('span');
+      req.className = 'required';
+      req.textContent = '*';
+      label.appendChild(req);
+    }
+    div.appendChild(label);
+
+    let input;
+    if (f.type === 'textarea') {
+      input = document.createElement('textarea');
+    } else if (f.type === 'select') {
+      input = document.createElement('select');
+      const opts = (f.options || '').split(',').map(o => o.trim()).filter(Boolean);
+      const blank = document.createElement('option');
+      blank.value = '';
+      blank.textContent = 'Select…';
+      input.appendChild(blank);
+      opts.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o;
+        opt.textContent = o;
+        input.appendChild(opt);
+      });
+    } else {
+      input = document.createElement('input');
+      input.type = f.type || 'text';
+    }
+    input.id = 'df-' + f.id;
+    if (f.placeholder) input.placeholder = f.placeholder;
+    div.appendChild(input);
+
+    container.appendChild(div);
+  });
+
+  // Pre-fill submitter name + email from session
+  if (currentUser?.email) {
+    const emailEl = document.getElementById('df-__email__');
+    if (emailEl) {
+      emailEl.value = currentUser.email;
+      emailEl.readOnly = true;
+    }
+  }
+
+  // Pre-fill submitter name from the ?r= token if present (one-time)
+  const rep = parseRepToken();
+  if (rep?.name) {
+    const nameEl = document.getElementById('df-__submitter__');
+    if (nameEl && !nameEl.value) nameEl.value = rep.name;
+  }
+}
+
+/**
+ * Build criteria fields. We render the criterion LABEL, HINT, and
+ * the option LABELS — but NOT the score numbers. The <option> value
+ * is the index (not the score), so page source doesn't expose the
+ * full label/score mapping at a glance. (Scoring logic in B.2.b
+ * will use the index to look up the score from workspace_config.)
+ */
+function buildCriteriaFields() {
+  const container = document.getElementById('form-criteria-fields');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const criteria = workspaceConfig?.criteria || [];
+  if (!criteria.length) {
+    container.innerHTML = '<div style="font-size:13px;color:#aaa;">No criteria configured yet.</div>';
+    return;
+  }
+
+  // If a project type is selected AND it has activeCriteriaIds, filter.
+  // Otherwise show all criteria.
+  const mapping = activeProjectTypeId
+    ? (workspaceConfig.project_type_mappings || []).find(pt => pt.id === activeProjectTypeId)
+    : null;
+  const activeIds = mapping?.activeCriteriaIds;
+  const visible = (activeIds && activeIds.length)
+    ? criteria.filter(c => activeIds.includes(c.id))
+    : criteria;
+
+  visible.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'criterion-card';
+
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'form-field';
+
+    const label = document.createElement('label');
+    label.setAttribute('for', 'dd-' + c.id);
+    label.textContent = c.label;
+    fieldDiv.appendChild(label);
+
+    if (c.hint) {
+      const hint = document.createElement('div');
+      hint.className = 'hint';
+      hint.textContent = c.hint;
+      fieldDiv.appendChild(hint);
+    }
+
+    const select = document.createElement('select');
+    select.id = 'dd-' + c.id;
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = 'Select…';
+    select.appendChild(blank);
+
+    (c.options || []).forEach((opt, i) => {
+      const optEl = document.createElement('option');
+      // Use index as value (NOT score) so rep doesn't see scores in HTML.
+      // B.2.b will map index → score using workspaceConfig.criteria[].options[].score.
+      optEl.value = String(i);
+      optEl.textContent = opt.label;
+      select.appendChild(optEl);
+    });
+
+    fieldDiv.appendChild(select);
+    card.appendChild(fieldDiv);
+    container.appendChild(card);
+  });
+}
+
+/* --- Placeholder submit (real submission in B.2.b) --- */
+async function submitRequest() {
+  clearFormStatus();
+  showFormStatus('info', 'Form submission is coming in the next update — your form renders correctly, but requests can\'t yet be submitted from the portal.');
+}
+
+/* --- Initial load flow --- */
 async function init() {
   if (window.location.hash.includes('access_token')) {
     showView('loading');
@@ -339,10 +795,33 @@ async function init() {
   const { data: { session } } = await _sb.auth.getSession();
 
   if (session && session.user) {
-    document.getElementById('signed-in-email').textContent = session.user.email || '(no email)';
+    currentSession = session;
+    currentUser = session.user;
+
+    // Render the inline email display
+    const emailInline = document.getElementById('signed-in-email-inline');
+    if (emailInline) emailInline.textContent = session.user.email || '(no email)';
+
+    // Show the signed-in view IMMEDIATELY so the user isn't staring at
+    // a blank loading state while we fetch config. The form will remain
+    // empty until config arrives, but the dashboard shell is visible.
     showView('signed-in');
+    showDashboardView();
+
     if (window.location.hash) {
       history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+
+    // Fetch workspace config + build form in the background. If this
+    // fails (e.g. RLS blocks, bad token), the dashboard still works;
+    // the form just won't populate until a later successful fetch.
+    workspaceConfig = await loadWorkspaceConfig();
+    if (workspaceConfig) {
+      buildProjectTypeSelect();
+      buildDetailFields();
+      buildCriteriaFields();
+    } else {
+      console.warn('[Portal] workspace_config unavailable; form will be empty');
     }
     return;
   }
@@ -355,11 +834,28 @@ async function init() {
   showView('signin');
 }
 
-_sb.auth.onAuthStateChange((event, session) => {
+_sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' && session) {
-    document.getElementById('signed-in-email').textContent = session.user.email || '(no email)';
+    currentSession = session;
+    currentUser = session.user;
+
+    const emailInline = document.getElementById('signed-in-email-inline');
+    if (emailInline) emailInline.textContent = session.user.email || '(no email)';
+
+    // Show UI immediately; fetch config in the background
     showView('signed-in');
+    showDashboardView();
+
+    workspaceConfig = await loadWorkspaceConfig();
+    if (workspaceConfig) {
+      buildProjectTypeSelect();
+      buildDetailFields();
+      buildCriteriaFields();
+    }
   } else if (event === 'SIGNED_OUT') {
+    currentSession = null;
+    currentUser = null;
+    workspaceConfig = null;
     showView('signin');
   }
 });

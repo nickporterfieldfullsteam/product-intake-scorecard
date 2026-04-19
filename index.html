@@ -1391,7 +1391,7 @@
               </label>
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
                 <input type="checkbox" id="qa-7-3" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
-                Version v1.9.2 visible in footer
+                Version v1.9.3 visible in footer
               </label>
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
                 <input type="checkbox" id="qa-7-4" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
@@ -1595,8 +1595,8 @@
 </footer>
 
 <script>
-const VERSION = '1.9.2';
-const BUILD_STAMP = '2026-04-18 07:27:20 PM EST';
+const VERSION = '1.9.3';
+const BUILD_STAMP = '2026-04-18 11:30:02 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -2390,7 +2390,8 @@ function renderKanban() {
       const id = e.dataTransfer.getData('text/plain');
       const p = projects.find(x => x.id == id);
       if (p && p.status !== status) {
-        p.status = status; persist();
+        p.status = status;
+        sbUpdateProjectField(id, 'status', status);
         renderKanban();
         buildStatusFilterBar();
         renderSummaryMetrics();
@@ -2541,7 +2542,8 @@ function openKanbanCard(id) {
       const d2 = (document.getElementById(`km-rd-d-${p.id}`)||{}).value||'';
       const y2 = (document.getElementById(`km-rd-y-${p.id}`)||{}).value||'';
       const val = (y2&&m2&&d2) ? y2+'-'+m2+'-'+d2 : '';
-      p.revisitDate = val; persist();
+      p.revisitDate = val;
+      sbUpdateProjectField(p.id, 'revisit_date', val || null);
       if (val) toast('Revisit date set to ' + (monthNames()[parseInt(m2)-1]) + ' ' + parseInt(d2) + ', ' + y2 + '.');
     };
   });
@@ -3969,7 +3971,12 @@ function sendDecisionEmail(id) {
   if (!templateId) { toast('Decision template ID not configured — check the Settings tab.'); return; }
   if (!saved.publicKey || !saved.serviceId) { toast('EmailJS credentials not configured — check the Settings tab.'); return; }
 
-  p.decisionNotes = notes; p.status = status; p.revisitDate = modalRevisitDate; persist();
+  p.decisionNotes = notes; p.status = status; p.revisitDate = modalRevisitDate;
+  _sb.from('projects').update({
+    decision_notes: notes,
+    status: status,
+    revisit_date: modalRevisitDate || null
+  }).eq('id', id);
   // Update badge in place
   const badge = document.getElementById('proj-status-badge-' + id);
   const sc = STATUS_CONFIG[status] || STATUS_CONFIG['Submitted'];
@@ -5746,9 +5753,9 @@ function runAutoQA() {
 
   // ── Tour & general (qa-7-x)
   check('qa-7-0', 'startTour function exists', () => typeof startTour === 'function');
-  check('qa-7-3', 'Footer shows v1.9.2 and build', () => {
+  check('qa-7-3', 'Footer shows v1.9.3 and build', () => {
     const fb = document.getElementById('footer-build');
-    return fb && fb.textContent.includes('1.9.2') && fb.textContent.includes('Build');
+    return fb && fb.textContent.includes('1.9.3') && fb.textContent.includes('Build');
   });
   check('qa-7-5', 'No critical globals missing', () => {
     return typeof projects !== 'undefined' &&

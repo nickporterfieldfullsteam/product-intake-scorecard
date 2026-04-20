@@ -65,19 +65,22 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
     expect(consoleErrors).toEqual([]);
   });
 
-  test('Clicking Send dispatches signInWithOtp with the entered email', async ({ portalPage }) => {
+  test('Clicking Send dispatches an OTP request with the entered email', async ({ portalPage }) => {
     // Intercept the Supabase OTP endpoint so we don't send a real email
-    // during tests. We verify the request was made with the right payload,
-    // then return a fake success response.
-    let capturedRequest: { email?: string; redirectTo?: string } | null = null;
+    // during tests. The portal now sends the redirect_to as a URL query
+    // param, not in the body. We verify the email is in the body.
+    let capturedRequest: { email?: string; redirectTo?: string; url?: string } | null = null;
 
     await portalPage.route('**/auth/v1/otp**', async (route, request) => {
       if (request.method() === 'POST') {
+        const url = request.url();
         try {
           const body = JSON.parse(request.postData() || '{}');
+          const u = new URL(url);
           capturedRequest = {
             email: body.email,
-            redirectTo: body.options?.email_redirect_to || body.redirect_to,
+            redirectTo: u.searchParams.get('redirect_to') || undefined,
+            url: url,
           };
         } catch {
           // if we can't parse, capture null
@@ -85,7 +88,7 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ user: null, session: null }),
+          body: JSON.stringify({}),
         });
       } else {
         await route.continue();
@@ -100,8 +103,10 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
     await expect(portalPage.locator('#sent-email')).toHaveText('test-rep@example.com');
 
     // And the network call should have been made with the right email
+    // and a redirect_to URL pointing back at the portal
     expect(capturedRequest).not.toBeNull();
     expect(capturedRequest!.email).toBe('test-rep@example.com');
+    expect(capturedRequest!.redirectTo).toMatch(/portal/);
   });
 
   test('Existing session causes the signed-in view to render', async ({ seededPortalPage }) => {
@@ -114,14 +119,12 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
   });
 
   test('Sign out returns to the sign-in view', async ({ page, baseURL }) => {
-    // Navigate to the portal first (with no session). The sign-in view
-    // will render; we'll ignore it for the moment.
+    // Navigate to the portal first (no session yet).
     const url = resolvePortalURL(baseURL!);
     await page.goto(url);
 
-    // Now seed the session directly via evaluate() — NOT addInitScript,
-    // because that would re-seed on every navigation including the
-    // post-signout reload. page.evaluate writes localStorage once.
+    // Seed a fake session directly via page.evaluate() so it's written
+    // once (not on every navigation like addInitScript would do).
     await page.evaluate(() => {
       const session = {
         access_token: 'fake-access-token-' + Date.now(),
@@ -134,15 +137,6 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
           aud: 'authenticated',
           role: 'authenticated',
           email: 'test-rep@arbiter.test',
-          email_confirmed_at: new Date().toISOString(),
-          phone: '',
-          confirmed_at: new Date().toISOString(),
-          last_sign_in_at: new Date().toISOString(),
-          app_metadata: { provider: 'email', providers: ['email'] },
-          user_metadata: { email: 'test-rep@arbiter.test' },
-          identities: [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         },
       };
       localStorage.setItem(
@@ -151,36 +145,33 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
       );
     });
 
-    // Reload so the portal's init() picks up the session
+    // Reload so the portal's init() picks up the session and shows
+    // the signed-in view.
     await page.reload();
     await expect(page.locator('#view-signed-in')).toBeVisible({ timeout: 5_000 });
 
-    // Intercept Supabase logout
+    // Intercept the logout endpoint so we don't actually call Supabase.
     await page.route('**/auth/v1/logout**', async route => {
       await route.fulfill({ status: 204, body: '' });
     });
 
-    // Click Sign out. In production, Supabase's signOut() clears
-    // localStorage itself. But with a fake access token, the client
-    // may error out before it gets there — leaving the session in
-    // place and the post-reload init() sees it and shows signed-in
-    // view. To simulate the production outcome, we explicitly clear
-    // localStorage after the click, then reload manually.
-    await page.locator('#sub-dashboard button.btn-secondary', { hasText: /Sign out/i }).click();
+    // Click Sign out. The portal's signOut() handler now deterministically
+    // clears localStorage and triggers a navigation via window.location.href.
+    // No workaround needed — we can just verify the end state.
+    await Promise.all([
+      page.waitForLoadState('load'),
+      page.locator('#sub-dashboard button.btn-secondary', { hasText: /Sign out/i }).click(),
+    ]);
 
-    // Wait a moment for any async signOut work to finish
-    await page.waitForTimeout(300);
-
-    // Force the end state: no session, reload
-    await page.evaluate(() => {
-      Object.keys(localStorage)
-        .filter(k => k.startsWith('sb-'))
-        .forEach(k => localStorage.removeItem(k));
-    });
-    await page.goto(resolvePortalURL(baseURL!));
-
-    // After navigation with no session, sign-in view should render
+    // After the post-signout reload, session should be gone and the
+    // sign-in view should render.
     await expect(page.locator('#view-signin')).toBeVisible();
     await expect(page.locator('#view-signed-in')).toBeHidden();
+
+    // Double-check: localStorage should not have the session key anymore.
+    const hasSession = await page.evaluate(() =>
+      !!localStorage.getItem('sb-arbiter-portal-auth')
+    );
+    expect(hasSession).toBe(false);
   });
 });

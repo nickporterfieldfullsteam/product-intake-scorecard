@@ -6,7 +6,6 @@
 <title>Arbiter — Track and Submit Requests</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MDAgNjAwIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLDQwKSI+PHBhdGggZD0iTTI5OS41LDBMMzAwLjUsMEMzMTIuNjIsMjIuMjA2IDU5Ni4yOSw1MTQuNzMzIDU5OS45OTksNTE4LjVDNTk5LjUwMiw1MTguNTU1IDYwMC40OTYsNTE5Ljk0NCA1OTkuOTk5LDUxOS45OTlDNTg2LjEyNCw1MjEuNTQgNTg2LjE0Myw1MTkuOTk5IDQyNS41LDUxOS45OTlDNDAyLjY2Myw0NzYuNTAxIDIxMi4yNzgsMTUzLjA1NSAyMTMuNzQsMTQ5LjU4NUMyMTUuNzM0LDE0NC44NTMgMjcxLjI1Miw1MS43MDEgMjk5LjUsMFoiIGZpbGw9InJnYigzNSwzNSw1NSkiLz48cGF0aCBkPSJNMTc0LjUsNTE5Ljk5OUwxLjUsNTE5Ljk5OUM1LjM4NCw1MDUuODk5IDk3LjI5LDM1NS4zMjggOTYuMjA1LDM1MS41ODhDOTQuNzU0LDM0Ni41ODQgOC4wMjEsMjAyLjQ1MyAxMS40OTQsMjAxLjQ3OEMxOS41ODIsMTk5LjIwOSAxOS43NSwyMDEuNDg2IDExNi41LDIwMS40ODZDMTgyLjUwMywyMDEuNDg2IDE4My40NzEsMjAwLjk1NyAxODUuMDg0LDIwMy43NDRDMTkxLjkyMSwyMTUuNTU2IDI2OS43NTQsMzUwLjA0IDI3MC4yMjYsMzUxLjU4MkMyNzEuMTE0LDM1NC40ODEgMTk0LjAxNyw0ODIuNjQ3IDE3NC41LDUxOS45OTlaIiBmaWxsPSJyZ2IoMCwxOTksMTExKSIvPjwvZz48L3N2Zz4=">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { overflow-y: scroll; }
@@ -21,285 +20,76 @@
   .app { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
   @media (max-width: 600px) { .app { padding: 1rem 0.75rem 5rem; } }
 
-  .header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
-  }
-  .brand-block {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .brand-text h1 {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin: 0;
-    line-height: 1.15;
-  }
-  .brand-text .tagline {
-    font-size: 13px;
-    color: #aaa;
-  }
+  .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .brand-block { display: flex; align-items: center; gap: 12px; }
+  .brand-text h1 { font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; line-height: 1.15; }
+  .brand-text .tagline { font-size: 13px; color: #aaa; }
 
-  .card {
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 12px;
-    padding: 2rem;
-    max-width: 420px;
-    margin: 3rem auto 0;
-  }
-  .card h2 {
-    font-size: 20px;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-  }
-  .card p {
-    font-size: 14px;
-    color: #666;
-    margin-bottom: 1.5rem;
-    line-height: 1.5;
-  }
+  .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 2rem; max-width: 420px; margin: 3rem auto 0; }
+  .card h2 { font-size: 20px; font-weight: 500; margin-bottom: 0.5rem; }
+  .card p { font-size: 14px; color: #666; margin-bottom: 1.5rem; line-height: 1.5; }
 
   .field { margin-bottom: 1rem; }
-  .field label {
-    display: block;
-    font-size: 11px;
-    font-weight: 600;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 6px;
-  }
-  .field input {
-    width: 100%;
-    font-family: inherit;
-    font-size: 14px;
-    padding: 10px 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: #fff;
-    color: #1a1a1a;
-  }
+  .field label { display: block; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+  .field input { width: 100%; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #1a1a1a; }
   .field input:focus { outline: none; border-color: #1a1a1a; }
-  .field input[readonly] {
-    background: #f5f5f3;
-    color: #888;
-    cursor: default;
-  }
+  .field input[readonly] { background: #f5f5f3; color: #888; cursor: default; }
 
-  .btn-primary {
-    width: 100%;
-    background: #1a1a1a;
-    color: #fff;
-    border: 1px solid #1a1a1a;
-    border-radius: 8px;
-    padding: 11px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-  }
+  .btn-primary { width: 100%; background: #1a1a1a; color: #fff; border: 1px solid #1a1a1a; border-radius: 8px; padding: 11px 20px; font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer; }
   .btn-primary:hover { background: #333; border-color: #333; }
-  .btn-primary:disabled {
-    background: #aaa;
-    border-color: #aaa;
-    cursor: not-allowed;
-  }
+  .btn-primary:disabled { background: #aaa; border-color: #aaa; cursor: not-allowed; }
 
-  .btn-secondary {
-    background: #fff;
-    color: #1a1a1a;
-    border: 1px solid #e5e5e5;
-    border-radius: 8px;
-    padding: 7px 14px;
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-  }
+  .btn-secondary { background: #fff; color: #1a1a1a; border: 1px solid #e5e5e5; border-radius: 8px; padding: 7px 14px; font-size: 13px; font-family: inherit; cursor: pointer; }
   .btn-secondary:hover { background: #fafaf9; }
 
-  .status-msg {
-    font-size: 13px;
-    padding: 12px 14px;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    line-height: 1.5;
-  }
+  .status-msg { font-size: 13px; padding: 12px 14px; border-radius: 8px; margin-bottom: 1rem; line-height: 1.5; }
   .status-msg.info    { background: #f0f7ff; color: #185FA5; border: 1px solid #d0e3f5; }
   .status-msg.success { background: #f0faf0; color: #1a7a1a; border: 1px solid #d0ebd0; }
   .status-msg.error   { background: #fef0f0; color: #a72020; border: 1px solid #f5d0d0; }
 
-  .signed-in-info {
-    background: #fafaf9;
-    border-radius: 8px;
-    padding: 14px 16px;
-    margin-bottom: 1rem;
-  }
-  .signed-in-info .label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 4px;
-  }
-  .signed-in-info .value {
-    font-size: 14px;
-    color: #1a1a1a;
-    word-break: break-all;
-  }
+  .signed-in-info { background: #fafaf9; border-radius: 8px; padding: 14px 16px; margin-bottom: 1rem; }
+  .signed-in-info .label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+  .signed-in-info .value { font-size: 14px; color: #1a1a1a; word-break: break-all; }
 
   .hidden { display: none !important; }
 
-  /* ========================================================
-   * Form styles (dynamic intake) — mirrors the main app's
-   * intake tab visual language.
-   * ======================================================== */
-
-  /* Sections (project type, details, criteria) */
-  .section {
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 12px;
-    padding: 1.25rem;
-    margin-bottom: 1rem;
-  }
+  .section { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
   .section.accent-blue  { border-left: 3px solid #378ADD; border-radius: 0 12px 12px 0; }
   .section.accent-amber { border-left: 3px solid #BA7517; border-radius: 0 12px 12px 0; }
-  .section-title {
-    font-size: 11px;
-    font-weight: 600;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 1rem;
-  }
+  .section-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
 
-  /* Form fields inside sections */
   .form-field { margin-bottom: 1.1rem; }
   .form-field:last-child { margin-bottom: 0; }
-  .form-field label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: #1a1a1a;
-    margin-bottom: 6px;
-  }
+  .form-field label { display: block; font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 6px; }
   .form-field label .required { color: #a72020; margin-left: 2px; }
-  .form-field .hint {
-    font-size: 12px;
-    color: #888;
-    margin-bottom: 6px;
-  }
+  .form-field .hint { font-size: 12px; color: #888; margin-bottom: 6px; }
   .form-field input[type="text"],
   .form-field input[type="email"],
   .form-field input[type="number"],
   .form-field textarea,
-  .form-field select {
-    width: 100%;
-    font-family: inherit;
-    font-size: 14px;
-    padding: 9px 11px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: #fff;
-    color: #1a1a1a;
-  }
+  .form-field select { width: 100%; font-family: inherit; font-size: 14px; padding: 9px 11px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #1a1a1a; }
   .form-field textarea { min-height: 70px; resize: vertical; }
-  .form-field input[readonly] {
-    background: #f5f5f3;
-    color: #888;
-    cursor: default;
-  }
+  .form-field input[readonly] { background: #f5f5f3; color: #888; cursor: default; }
   .form-field input:focus,
   .form-field textarea:focus,
   .form-field select:focus { outline: none; border-color: #1a1a1a; }
 
-  /* Criterion card wrapper — each criterion is in its own subtle card */
-  .criterion-card {
-    background: #fafaf9;
-    border: 1px solid #f0f0ee;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-  }
+  .criterion-card { background: #fafaf9; border: 1px solid #f0f0ee; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }
   .criterion-card:last-child { margin-bottom: 0; }
   .criterion-card .form-field { margin-bottom: 0; }
 
-  /* Project-type badge (shown after selection) */
-  .pt-badge {
-    display: inline-block;
-    background: #fafaf9;
-    border: 1px solid #e5e5e5;
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 12px;
-    color: #555;
-    margin-top: 10px;
-  }
+  .pt-badge { display: inline-block; background: #fafaf9; border: 1px solid #e5e5e5; border-radius: 6px; padding: 4px 10px; font-size: 12px; color: #555; margin-top: 10px; }
 
-  /* Submit button area */
-  .submit-row {
-    display: flex;
-    gap: 10px;
-    margin-top: 1rem;
-  }
+  .submit-row { display: flex; gap: 10px; margin-top: 1rem; }
   .submit-row .btn-primary { flex: 1; }
 
-  /* Dashboard header (above form toggle) */
-  .dashboard-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1rem;
-  }
-  .dashboard-bar .title {
-    font-size: 16px;
-    font-weight: 500;
-  }
-  .dashboard-bar .title-sub {
-    font-size: 12px;
-    color: #888;
-    margin-top: 2px;
-  }
+  .dashboard-bar { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .dashboard-bar .title { font-size: 16px; font-weight: 500; }
+  .dashboard-bar .title-sub { font-size: 12px; color: #888; margin-top: 2px; }
 
-  /* "Coming soon" / empty states */
-  .empty-state {
-    text-align: center;
-    color: #888;
-    font-size: 14px;
-    padding: 2rem 1rem;
-    background: #fff;
-    border: 1px dashed #e5e5e5;
-    border-radius: 12px;
-  }
+  .empty-state { text-align: center; color: #888; font-size: 14px; padding: 2rem 1rem; background: #fff; border: 1px dashed #e5e5e5; border-radius: 12px; }
 
-  /* Toast (success after submit) */
-  .toast {
-    position: fixed;
-    bottom: 60px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1a1a1a;
-    color: #fff;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-size: 13px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-    z-index: 500;
-  }
+  .toast { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 500; }
   .toast.show { opacity: 1; }
 </style>
 </head>
@@ -347,10 +137,7 @@
     <p>Just a moment.</p>
   </div>
 
-  <!-- Signed-in state: dashboard + form, swapped by JS -->
   <div id="view-signed-in" class="hidden">
-
-    <!-- Dashboard sub-view: list of submissions + Submit button -->
     <div id="sub-dashboard">
       <div class="dashboard-bar">
         <div>
@@ -369,7 +156,6 @@
       </div>
     </div>
 
-    <!-- Form sub-view: the dynamic intake form -->
     <div id="sub-form" class="hidden">
       <div class="dashboard-bar">
         <div>
@@ -379,7 +165,6 @@
         <button class="btn-secondary" onclick="showDashboardView()">← Back</button>
       </div>
 
-      <!-- Project type -->
       <div class="section" id="section-project-type">
         <div class="section-title">Project type</div>
         <div class="form-field" style="margin-bottom:0;">
@@ -391,26 +176,22 @@
         </div>
       </div>
 
-      <!-- Project details (locked + configured) -->
       <div class="section accent-blue" id="section-details">
         <div class="section-title">Project details</div>
         <div id="form-detail-fields"></div>
       </div>
 
-      <!-- Scoring criteria -->
       <div class="section accent-amber" id="section-criteria">
         <div class="section-title">Scoring criteria</div>
         <div id="form-criteria-fields"></div>
       </div>
 
-      <!-- Submit bar -->
       <div id="form-submit-status" class="status-msg hidden"></div>
       <div class="submit-row">
         <button id="btn-submit-request" class="btn-primary" onclick="submitRequest()">Submit request</button>
         <button class="btn-secondary" onclick="showDashboardView()">Cancel</button>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -431,47 +212,32 @@
 
 <script>
 /* ============================================================
- * Arbiter Portal — Step B.2.a (dynamic form rendering)
- * Auth gate from B.1 + form rendered from live workspace_config.
- * Submit handler is a placeholder; real submission lands in B.2.b.
+ * Arbiter Portal — raw-fetch architecture
+ * No Supabase JS client. All auth + data via direct REST calls.
+ *
+ * Background: through v0.1.0–v0.2.3 the portal used
+ * @supabase/supabase-js. In this environment its auth module
+ * reliably hangs getSession() and .from().select() on page
+ * refresh. Multiple config-level fixes (storageKey isolation,
+ * no-op locks, autoRefresh tweaks) didn't help. We confirmed
+ * raw fetch against /rest/v1 works reliably under the exact
+ * same conditions. This file replaces the client entirely.
+ *
+ * What we trade for reliability:
+ *   - No automatic token refresh (token expires after 1hr)
+ *   - No multi-tab auth state sync (don't need it)
+ *   - Have to write our own REST helpers (done, see sbSelectOne/
+ *     sbSelectMany/sbInsert/sbUpdate below)
  * ============================================================ */
 
-const VERSION = '0.2.3';
-const BUILD_STAMP = '2026-04-19 06:03:01 PM EST';
+const VERSION = '0.3.0';
+const BUILD_STAMP = '2026-04-20 04:40:59 PM EST';
 
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
-
-// For now we hardcode the production workspace. Long-term: derive this
-// from the rep's email via the reps table. One-workspace-per-deployment
-// for the foreseeable future.
 const WORKSPACE_ID = '704582e1-229c-470f-9eed-9d650e100118';
+const STORAGE_KEY = 'sb-arbiter-portal-auth';
 
-const REDIRECT_TO = window.location.origin + window.location.pathname;
-
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    // Dedicated storage key so the portal's auth session lives in its
-    // own localStorage bucket, separate from the main Arbiter app at
-    // /index.html and separate from the Supabase dashboard (both of
-    // which create their own clients using the default key).
-    storageKey: 'sb-arbiter-portal-auth',
-    // No-op lock. Supabase's default lock uses navigator.locks to
-    // coordinate token refreshes across tabs, but this caused queries
-    // to hang indefinitely in practice — even with an isolated storage
-    // key. A no-op lock is safe for the portal because it's a single
-    // tab, single client; we don't need cross-tab coordination. If
-    // multiple portal tabs are ever open concurrently, the only
-    // downside is that token refresh may race (but worst case is a
-    // refreshed token being discarded and refetched — no data loss).
-    lock: async (_name, _acquireTimeout, fn) => await fn(),
-  }
-});
-
-/* --- Locked fields (same as main app — name/customer/submitter/email) --- */
 const LOCKED_FIELDS = [
   { id: '__name__',      label: 'Project / feature name', placeholder: 'e.g. Bulk export API', type: 'text',  required: true },
   { id: '__customer__',  label: 'Customer / prospect',    placeholder: 'Account name',          type: 'text',  required: true },
@@ -479,13 +245,220 @@ const LOCKED_FIELDS = [
   { id: '__email__',     label: 'Submitter email',        placeholder: 'your@email.com',        type: 'email', required: true },
 ];
 
-/* --- Runtime state (populated from Supabase after sign-in) --- */
-let currentUser = null;
 let currentSession = null;
+let currentUser = null;
 let workspaceConfig = null;
 let activeProjectTypeId = null;
 
-/* --- View helpers --- */
+/* ============================================================
+ * Auth — hand-rolled
+ * ============================================================ */
+
+function getStoredSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (!s || !s.access_token || !s.user) return null;
+    if (s.expires_at && (s.expires_at * 1000) < Date.now()) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+function storeSession(session) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+}
+
+function clearStoredSession() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+function authHeaders() {
+  if (!currentSession) throw new Error('No active session');
+  return {
+    'apikey': SUPABASE_PUBLISHABLE_KEY,
+    'Authorization': 'Bearer ' + currentSession.access_token,
+    'Content-Type': 'application/json',
+  };
+}
+
+async function sendOtp(email, redirectTo) {
+  const resp = await fetch(SUPABASE_URL + '/auth/v1/otp?redirect_to=' + encodeURIComponent(redirectTo), {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_PUBLISHABLE_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email: email, create_user: true }),
+  });
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error('OTP request failed: ' + resp.status + ' ' + body);
+  }
+  return true;
+}
+
+/**
+ * Parse access_token callback from URL hash. Supabase redirects with:
+ *   #access_token=...&refresh_token=...&expires_in=...&token_type=bearer
+ * Returns parsed session or null if no callback hash.
+ */
+function parseCallbackFromUrl() {
+  const hash = window.location.hash;
+  if (!hash || !hash.includes('access_token=')) return null;
+  const params = new URLSearchParams(hash.slice(1));
+  const accessToken = params.get('access_token');
+  if (!accessToken) return null;
+  let user = null;
+  try {
+    const payloadB64 = accessToken.split('.')[1];
+    const b64 = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(b64));
+    user = {
+      id: payload.sub,
+      email: payload.email,
+      aud: payload.aud,
+      role: payload.role,
+    };
+  } catch (err) {
+    console.warn('[Portal] Failed to decode JWT payload:', err);
+  }
+  const expiresIn = parseInt(params.get('expires_in') || '3600', 10);
+  return {
+    access_token: accessToken,
+    refresh_token: params.get('refresh_token') || null,
+    expires_in: expiresIn,
+    expires_at: Math.floor(Date.now() / 1000) + expiresIn,
+    token_type: params.get('token_type') || 'bearer',
+    user: user,
+  };
+}
+
+function cleanUrlHash() {
+  if (window.location.hash) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+}
+
+async function serverSignOut() {
+  if (!currentSession) return;
+  try {
+    await fetch(SUPABASE_URL + '/auth/v1/logout', {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+  } catch (err) {
+    console.warn('[Portal] Logout request failed (continuing with local cleanup):', err);
+  }
+}
+
+/* ============================================================
+ * Supabase REST helpers
+ * ============================================================ */
+
+async function sbSelectOne(table, filter, select) {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filter)) {
+    params.set(k, 'eq.' + v);
+  }
+  if (select) params.set('select', select);
+  const url = SUPABASE_URL + '/rest/v1/' + table + '?' + params.toString();
+  const resp = await fetch(url, { headers: authHeaders() });
+  if (!resp.ok) {
+    throw new Error(table + ' select failed: ' + resp.status + ' ' + await resp.text());
+  }
+  const rows = await resp.json();
+  return rows?.[0] || null;
+}
+
+async function sbSelectMany(table, filter, select, order) {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filter)) {
+    // Support string filters like "neq.abc" by leaving them untouched
+    if (typeof v === 'string' && /^(eq|neq|gt|gte|lt|lte|like|ilike|is)\./.test(v)) {
+      params.set(k, v);
+    } else {
+      params.set(k, 'eq.' + v);
+    }
+  }
+  if (select) params.set('select', select);
+  if (order) params.set('order', order);
+  const url = SUPABASE_URL + '/rest/v1/' + table + '?' + params.toString();
+  const resp = await fetch(url, { headers: authHeaders() });
+  if (!resp.ok) {
+    throw new Error(table + ' select failed: ' + resp.status + ' ' + await resp.text());
+  }
+  return await resp.json();
+}
+
+async function sbInsert(table, row) {
+  const resp = await fetch(SUPABASE_URL + '/rest/v1/' + table, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(row),
+  });
+  if (!resp.ok) {
+    throw new Error(table + ' insert failed: ' + resp.status + ' ' + await resp.text());
+  }
+  const rows = await resp.json();
+  return rows?.[0] || null;
+}
+
+/* ============================================================
+ * Scoring (mirrors main app calcScore)
+ * ============================================================ */
+
+function getWeight(criterionId) {
+  const w = workspaceConfig?.weights?.[criterionId];
+  return (w !== undefined && w !== null) ? w : 1.5;
+}
+
+function getActiveCriteria() {
+  if (!workspaceConfig?.criteria) return [];
+  const mapping = activeProjectTypeId
+    ? (workspaceConfig.project_type_mappings || []).find(pt => pt.id === activeProjectTypeId)
+    : null;
+  const activeIds = mapping?.activeCriteriaIds;
+  if (activeIds && activeIds.length) {
+    return workspaceConfig.criteria.filter(c => activeIds.includes(c.id));
+  }
+  return workspaceConfig.criteria;
+}
+
+function getTier(score) {
+  const th = workspaceConfig?.tier_thresholds || { pursue: 75, evaluate: 55, defer: 35 };
+  if (score >= th.pursue)   return 'Pursue';
+  if (score >= th.evaluate) return 'Evaluate further';
+  if (score >= th.defer)    return 'Defer';
+  return 'Pass';
+}
+
+function computeScore(criteriaVals) {
+  const active = getActiveCriteria();
+  if (active.length === 0) return 0;
+  let totalWeight = 0;
+  let weightedSum = 0;
+  active.forEach(c => {
+    const w = getWeight(c.id);
+    const v = criteriaVals[c.id];
+    if (v !== undefined && v !== null) {
+      totalWeight += w;
+      weightedSum += w * v;
+    }
+  });
+  if (totalWeight === 0) return 0;
+  return Math.round((weightedSum / totalWeight) * 10);
+}
+
+/* ============================================================
+ * View helpers
+ * ============================================================ */
+
 const views = ['signin', 'link-sent', 'loading', 'signed-in'];
 function showView(name) {
   views.forEach(v => {
@@ -500,7 +473,6 @@ function showStatus(kind, msg) {
   el.textContent = msg;
   el.classList.remove('hidden');
 }
-
 function clearStatus() {
   const el = document.getElementById('signin-status');
   el.classList.add('hidden');
@@ -544,7 +516,6 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-/* --- Rep link token parsing (backwards-compat) --- */
 function parseRepToken() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -557,7 +528,16 @@ function parseRepToken() {
   }
 }
 
-/* --- Auth actions --- */
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+/* ============================================================
+ * Auth actions
+ * ============================================================ */
+
 async function sendMagicLink() {
   const emailEl = document.getElementById('signin-email');
   const email = (emailEl.value || '').trim().toLowerCase();
@@ -573,13 +553,8 @@ async function sendMagicLink() {
   clearStatus();
 
   try {
-    const { error } = await _sb.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: REDIRECT_TO },
-    });
-
-    if (error) throw error;
-
+    const redirectTo = window.location.origin + window.location.pathname;
+    await sendOtp(email, redirectTo);
     document.getElementById('sent-email').textContent = email;
     showView('link-sent');
   } catch (err) {
@@ -599,57 +574,34 @@ function resetToSignin() {
 }
 
 async function signOut() {
-  await _sb.auth.signOut();
+  await serverSignOut();
+  clearStoredSession();
+  currentSession = null;
+  currentUser = null;
+  workspaceConfig = null;
   window.location.href = window.location.pathname;
 }
 
-/* --- Fetch workspace config from Supabase --- */
-// We use raw fetch here rather than _sb.from(...).select() because the
-// Supabase JS client's query builder was reliably hanging after the
-// response arrived — status 200 and bytes transferred per DevTools,
-// but .single()'s Promise never resolved. Raw fetch with the session's
-// access token works reliably. This is a targeted workaround for the
-// config-load path; other Supabase client calls (auth, real-time) are
-// unaffected.
+/* ============================================================
+ * Config + form building
+ * ============================================================ */
+
 async function loadWorkspaceConfig() {
   try {
-    const { data: { session } } = await _sb.auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
-      console.warn('[Portal] No access token available for config fetch');
-      return null;
-    }
-    const url = SUPABASE_URL + '/rest/v1/workspace_config'
-      + '?workspace_id=eq.' + encodeURIComponent(WORKSPACE_ID)
-      + '&select=criteria,detail_fields,project_type_mappings,custom_presets,weights,tier_thresholds';
-    const resp = await fetch(url, {
-      headers: {
-        'apikey': SUPABASE_PUBLISHABLE_KEY,
-        'Authorization': 'Bearer ' + token,
-        'Accept': 'application/json',
-      }
-    });
-    if (!resp.ok) {
-      console.error('[Portal] Config fetch failed:', resp.status, await resp.text());
-      return null;
-    }
-    const rows = await resp.json();
-    if (!Array.isArray(rows) || rows.length === 0) {
-      console.warn('[Portal] No workspace_config row returned');
-      return null;
-    }
-    return rows[0];
+    return await sbSelectOne(
+      'workspace_config',
+      { workspace_id: WORKSPACE_ID },
+      'criteria,detail_fields,project_type_mappings,custom_presets,weights,tier_thresholds'
+    );
   } catch (err) {
-    console.error('[Portal] Config fetch exception:', err);
+    console.error('[Portal] loadWorkspaceConfig failed:', err);
     return null;
   }
 }
 
-/* --- Form building --- */
 function buildProjectTypeSelect() {
   const sel = document.getElementById('form-project-type');
   if (!sel) return;
-  // Clear existing options after the default
   sel.innerHTML = '<option value="">Select a project type…</option>';
   const mappings = workspaceConfig?.project_type_mappings || [];
   mappings.forEach(pt => {
@@ -688,7 +640,6 @@ function buildDetailFields() {
   if (!container) return;
   container.innerHTML = '';
 
-  // Locked fields first (name, customer, submitter, email)
   const allFields = [...LOCKED_FIELDS, ...(workspaceConfig?.detail_fields || [])];
 
   allFields.forEach(f => {
@@ -733,7 +684,6 @@ function buildDetailFields() {
     container.appendChild(div);
   });
 
-  // Pre-fill submitter name + email from session
   if (currentUser?.email) {
     const emailEl = document.getElementById('df-__email__');
     if (emailEl) {
@@ -742,7 +692,6 @@ function buildDetailFields() {
     }
   }
 
-  // Pre-fill submitter name from the ?r= token if present (one-time)
   const rep = parseRepToken();
   if (rep?.name) {
     const nameEl = document.getElementById('df-__submitter__');
@@ -750,33 +699,16 @@ function buildDetailFields() {
   }
 }
 
-/**
- * Build criteria fields. We render the criterion LABEL, HINT, and
- * the option LABELS — but NOT the score numbers. The <option> value
- * is the index (not the score), so page source doesn't expose the
- * full label/score mapping at a glance. (Scoring logic in B.2.b
- * will use the index to look up the score from workspace_config.)
- */
 function buildCriteriaFields() {
   const container = document.getElementById('form-criteria-fields');
   if (!container) return;
   container.innerHTML = '';
 
-  const criteria = workspaceConfig?.criteria || [];
-  if (!criteria.length) {
+  const visible = getActiveCriteria();
+  if (!visible.length) {
     container.innerHTML = '<div style="font-size:13px;color:#aaa;">No criteria configured yet.</div>';
     return;
   }
-
-  // If a project type is selected AND it has activeCriteriaIds, filter.
-  // Otherwise show all criteria.
-  const mapping = activeProjectTypeId
-    ? (workspaceConfig.project_type_mappings || []).find(pt => pt.id === activeProjectTypeId)
-    : null;
-  const activeIds = mapping?.activeCriteriaIds;
-  const visible = (activeIds && activeIds.length)
-    ? criteria.filter(c => activeIds.includes(c.id))
-    : criteria;
 
   visible.forEach(c => {
     const card = document.createElement('div');
@@ -806,8 +738,6 @@ function buildCriteriaFields() {
 
     (c.options || []).forEach((opt, i) => {
       const optEl = document.createElement('option');
-      // Use index as value (NOT score) so rep doesn't see scores in HTML.
-      // B.2.b will map index → score using workspaceConfig.criteria[].options[].score.
       optEl.value = String(i);
       optEl.textContent = opt.label;
       select.appendChild(optEl);
@@ -819,45 +749,224 @@ function buildCriteriaFields() {
   });
 }
 
-/* --- Placeholder submit (real submission in B.2.b) --- */
+/* ============================================================
+ * Submit — real DB write
+ * ============================================================ */
+
 async function submitRequest() {
   clearFormStatus();
-  showFormStatus('info', 'Form submission is coming in the next update — your form renders correctly, but requests can\'t yet be submitted from the portal.');
-}
 
-/* --- Initial load flow --- */
-async function init() {
-  if (window.location.hash.includes('access_token')) {
-    showView('loading');
+  const projectTypeId = document.getElementById('form-project-type').value;
+  if (!projectTypeId) {
+    showFormStatus('error', 'Please select a project type.');
+    return;
   }
 
-  await new Promise(r => setTimeout(r, 200));
+  const lockedVals = {};
+  for (const f of LOCKED_FIELDS) {
+    const el = document.getElementById('df-' + f.id);
+    const val = (el?.value || '').trim();
+    if (f.required && !val) {
+      showFormStatus('error', 'Missing required field: ' + f.label);
+      return;
+    }
+    lockedVals[f.id] = val;
+  }
 
-  const { data: { session } } = await _sb.auth.getSession();
+  const detailVals = {};
+  let detailError = null;
+  (workspaceConfig?.detail_fields || []).forEach(f => {
+    const el = document.getElementById('df-' + f.id);
+    const val = (el?.value || '').trim();
+    if (f.required && !val && !detailError) {
+      detailError = 'Missing required field: ' + f.label;
+    }
+    detailVals[f.id] = val;
+  });
+  if (detailError) {
+    showFormStatus('error', detailError);
+    return;
+  }
 
-  if (session && session.user) {
-    currentSession = session;
-    currentUser = session.user;
+  const criteriaVals = {};
+  const missing = [];
+  getActiveCriteria().forEach(c => {
+    const el = document.getElementById('dd-' + c.id);
+    const v = el?.value;
+    if (v === '' || v === null || v === undefined) {
+      missing.push(c.label);
+      return;
+    }
+    const idx = parseInt(v, 10);
+    const opt = c.options?.[idx];
+    if (!opt || typeof opt.score !== 'number') {
+      missing.push(c.label + ' (invalid option)');
+      return;
+    }
+    criteriaVals[c.id] = opt.score;
+  });
+  if (missing.length) {
+    showFormStatus('error', 'Please answer all criteria: ' + missing.join(', '));
+    return;
+  }
 
-    // Render the inline email display
+  const score = computeScore(criteriaVals);
+  const tier = getTier(score);
+
+  const projectTypeMapping = (workspaceConfig?.project_type_mappings || []).find(pt => pt.id === projectTypeId);
+  const row = {
+    workspace_id: WORKSPACE_ID,
+    created_by: currentUser.id,
+    name: lockedVals['__name__'],
+    status: 'Submitted',
+    score: score,
+    tier: tier,
+    criteria_vals: criteriaVals,
+    criteria_snapshot: {
+      criteria: workspaceConfig.criteria,
+      weights: workspaceConfig.weights,
+      tier_thresholds: workspaceConfig.tier_thresholds,
+    },
+    locked_vals: lockedVals,
+    detail_vals: detailVals,
+    project_type: projectTypeMapping?.label || '',
+    project_type_id: projectTypeId,
+    submitter_email: currentUser.email,
+    is_sample: false,
+  };
+
+  const btn = document.getElementById('btn-submit-request');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    const saved = await sbInsert('projects', row);
+    if (!saved) throw new Error('Insert returned no row');
+
+    toast('Request submitted!');
+    showDashboardView();
+    btn.disabled = false;
+    btn.textContent = 'Submit request';
+    await renderSubmissionsList();
+    resetFormFields();
+  } catch (err) {
+    console.error('[Portal] Submit failed:', err);
+    showFormStatus('error', 'Submission failed: ' + (err.message || 'please try again'));
+    btn.disabled = false;
+    btn.textContent = 'Submit request';
+  }
+}
+
+function resetFormFields() {
+  const ptSel = document.getElementById('form-project-type');
+  if (ptSel) ptSel.value = '';
+  activeProjectTypeId = null;
+  document.getElementById('form-project-type-badge').classList.add('hidden');
+
+  LOCKED_FIELDS.forEach(f => {
+    const el = document.getElementById('df-' + f.id);
+    if (!el) return;
+    if (f.id === '__email__') return; // keep pre-filled
+    el.value = '';
+  });
+  (workspaceConfig?.detail_fields || []).forEach(f => {
+    const el = document.getElementById('df-' + f.id);
+    if (el) el.value = '';
+  });
+  buildCriteriaFields();
+}
+
+/* ============================================================
+ * Submissions list
+ * ============================================================ */
+
+async function renderSubmissionsList() {
+  const container = document.getElementById('submissions-list');
+  if (!container || !currentUser) return;
+
+  try {
+    const rows = await sbSelectMany(
+      'projects',
+      {
+        workspace_id: WORKSPACE_ID,
+        submitter_email: currentUser.email,
+        deleted_at: 'is.null',
+      },
+      'id,name,status,created_at,locked_vals',
+      'created_at.desc'
+    );
+
+    if (!rows || rows.length === 0) {
+      container.innerHTML = '<div class="empty-state">You have no submissions yet.<br>Click <strong>+ Submit a request</strong> to send one in.</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    rows.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'section';
+      div.style.padding = '0.85rem 1rem';
+      div.style.marginBottom = '0.5rem';
+      const customer = r.locked_vals?.__customer__ || '—';
+      const date = r.created_at ? new Date(r.created_at).toLocaleDateString() : '';
+      div.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+          <div>
+            <div style="font-size:14px;font-weight:500;">${escapeHtml(r.name)}</div>
+            <div style="font-size:12px;color:#888;margin-top:2px;">${escapeHtml(customer)} · ${date}</div>
+          </div>
+          <div style="font-size:11px;font-weight:600;color:#555;padding:4px 10px;background:#fafaf9;border-radius:6px;border:1px solid #e5e5e5;">
+            ${escapeHtml(r.status || 'Submitted')}
+          </div>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  } catch (err) {
+    console.error('[Portal] renderSubmissionsList failed:', err);
+    container.innerHTML = '<div class="empty-state" style="color:#a72020;">Couldn\'t load your submissions. Try refreshing.</div>';
+  }
+}
+
+/* ============================================================
+ * Init
+ * ============================================================ */
+
+async function init() {
+  // Callback from magic link?
+  if (window.location.hash.includes('access_token=')) {
+    showView('loading');
+    const session = parseCallbackFromUrl();
+    if (session) {
+      storeSession(session);
+      currentSession = session;
+      currentUser = session.user;
+    }
+    cleanUrlHash();
+  }
+
+  // Resume from storage if we didn't just get a callback
+  if (!currentSession) {
+    const stored = getStoredSession();
+    if (stored) {
+      currentSession = stored;
+      currentUser = stored.user;
+    }
+  }
+
+  if (currentSession && currentUser) {
     const emailInline = document.getElementById('signed-in-email-inline');
-    if (emailInline) emailInline.textContent = session.user.email || '(no email)';
+    if (emailInline) emailInline.textContent = currentUser.email || '(no email)';
 
-    // Show the signed-in view IMMEDIATELY so the user isn't staring at
-    // a blank loading state while we fetch config. The form will remain
-    // empty until config arrives, but the dashboard shell is visible.
     showView('signed-in');
     showDashboardView();
 
-    if (window.location.hash) {
-      history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-
-    // Fetch workspace config + build form in the background. If this
-    // fails (e.g. RLS blocks, bad token), the dashboard still works;
-    // the form just won't populate until a later successful fetch.
-    workspaceConfig = await loadWorkspaceConfig();
-    if (workspaceConfig) {
+    const [config] = await Promise.all([
+      loadWorkspaceConfig(),
+      renderSubmissionsList(),
+    ]);
+    if (config) {
+      workspaceConfig = config;
       buildProjectTypeSelect();
       buildDetailFields();
       buildCriteriaFields();
@@ -871,35 +980,8 @@ async function init() {
   if (repInfo && repInfo.email) {
     document.getElementById('signin-email').value = repInfo.email;
   }
-
   showView('signin');
 }
-
-_sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session) {
-    currentSession = session;
-    currentUser = session.user;
-
-    const emailInline = document.getElementById('signed-in-email-inline');
-    if (emailInline) emailInline.textContent = session.user.email || '(no email)';
-
-    // Show UI immediately; fetch config in the background
-    showView('signed-in');
-    showDashboardView();
-
-    workspaceConfig = await loadWorkspaceConfig();
-    if (workspaceConfig) {
-      buildProjectTypeSelect();
-      buildDetailFields();
-      buildCriteriaFields();
-    }
-  } else if (event === 'SIGNED_OUT') {
-    currentSession = null;
-    currentUser = null;
-    workspaceConfig = null;
-    showView('signin');
-  }
-});
 
 document.addEventListener('DOMContentLoaded', () => {
   const fb = document.getElementById('footer-build');

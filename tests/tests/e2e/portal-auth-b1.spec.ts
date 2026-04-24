@@ -71,6 +71,21 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
     // param, not in the body. We verify the email is in the body.
     let capturedRequest: { email?: string; redirectTo?: string; url?: string } | null = null;
 
+    // As of v0.4.2, the portal also queries reps BEFORE calling OTP, to
+    // check if the email is authorized. Mock it to return an active rep
+    // so the authorized code path is exercised.
+    await portalPage.route('**/rest/v1/reps**', async (route, request) => {
+      if (request.method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([{ id: 'fake-rep-id' }]),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
     await portalPage.route('**/auth/v1/otp**', async (route, request) => {
       if (request.method() === 'POST') {
         const url = request.url();
@@ -107,6 +122,48 @@ test.describe('Phase 3 B.1 — Portal auth gate', () => {
     expect(capturedRequest).not.toBeNull();
     expect(capturedRequest!.email).toBe('test-rep@example.com');
     expect(capturedRequest!.redirectTo).toMatch(/portal/);
+  });
+
+  test('Unauthorized email silently skips OTP but shows same link-sent view (v0.4.2)', async ({ portalPage }) => {
+    // v0.4.2: portal queries reps before sending OTP. If the email isn't
+    // an active rep, no OTP should be sent, but the UI should be
+    // indistinguishable from the authorized path (same "Check your
+    // email" screen) so an attacker can't tell whether they probed a
+    // real rep's email.
+    let otpRequestMade = false;
+
+    // Mock reps to return empty (email is NOT in reps)
+    await portalPage.route('**/rest/v1/reps**', async (route, request) => {
+      if (request.method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    // Mock OTP endpoint to detect if it gets called (it shouldn't)
+    await portalPage.route('**/auth/v1/otp**', async (route, request) => {
+      if (request.method() === 'POST') {
+        otpRequestMade = true;
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await portalPage.fill('#signin-email', 'not-a-rep@example.com');
+    await portalPage.click('#btn-send-link');
+
+    // The "check your email" view SHOULD still appear (identical UX)
+    await expect(portalPage.locator('#view-link-sent')).toBeVisible();
+    await expect(portalPage.locator('#sent-email')).toHaveText('not-a-rep@example.com');
+
+    // But OTP must NOT have been called
+    expect(otpRequestMade).toBe(false);
   });
 
   test('Existing session causes the signed-in view to render', async ({ seededPortalPage }) => {

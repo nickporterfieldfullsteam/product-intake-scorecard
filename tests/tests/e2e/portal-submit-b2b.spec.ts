@@ -328,7 +328,7 @@ test.describe('Phase 3 B.2.b — Portal submit flow', () => {
     });
 
     // Initial state: list empty, form hidden
-    await expect(page.locator('#submissions-list')).toContainText(/no submissions yet/i);
+    await expect(page.locator('#projects-list')).toContainText(/no submissions yet/i);
 
     // Open form, fill, submit
     await page.locator('button', { hasText: /Submit a request/i }).first().click();
@@ -350,8 +350,8 @@ test.describe('Phase 3 B.2.b — Portal submit flow', () => {
     await expect(page.locator('#sub-form')).toBeHidden();
 
     // Submissions list was refreshed and now shows the new row
-    await expect(page.locator('#submissions-list')).toContainText('Submitted project');
-    await expect(page.locator('#submissions-list')).toContainText('Acme Corp');
+    await expect(page.locator('#projects-list')).toContainText('Submitted project');
+    await expect(page.locator('#projects-list')).toContainText('Acme Corp');
 
     // Form fields cleared for next use (check by re-opening form)
     await page.locator('button', { hasText: /Submit a request/i }).first().click();

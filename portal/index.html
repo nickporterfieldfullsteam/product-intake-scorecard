@@ -59,9 +59,21 @@
   .form-field label { display: block; font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 6px; }
   .form-field label .required { color: #a72020; margin-left: 2px; }
   .form-field .hint { font-size: 12px; color: #888; margin-bottom: 6px; }
+  /* Two-column grid for detail-field rows. Mirrors the main app's intake
+     form layout — pairs of narrow inputs side by side, wide fields
+     (textareas) span the full row. Inside the grid context, we drop the
+     per-field bottom margin in favor of grid gap. Mobile collapses to
+     a single column. */
+  #form-detail-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+  #form-detail-fields .form-field { margin-bottom: 0; }
+  #form-detail-fields .form-field--wide { grid-column: 1 / -1; }
+  @media (max-width: 600px) {
+    #form-detail-fields { grid-template-columns: 1fr; }
+  }
   .form-field input[type="text"],
   .form-field input[type="email"],
   .form-field input[type="number"],
+  .form-field input[type="date"],
   .form-field textarea,
   .form-field select { width: 100%; font-family: inherit; font-size: 14px; padding: 9px 11px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #1a1a1a; }
   .form-field textarea { min-height: 70px; resize: vertical; }
@@ -298,7 +310,7 @@
  * ============================================================ */
 
 const VERSION = '0.5.0';
-const BUILD_STAMP = '2026-04-26 05:07:02 PM EST';
+const BUILD_STAMP = '2026-04-26 05:20:33 PM EST';
 
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
@@ -832,6 +844,12 @@ function buildDetailFields() {
   allFields.forEach(f => {
     const div = document.createElement('div');
     div.className = 'form-field';
+    // Wide fields (textareas) span both columns of the 2-column grid layout,
+    // matching the main app's intake form. Narrow types stay in a single
+    // grid cell so they pair up side-by-side with their neighbor.
+    if (f.type === 'textarea') {
+      div.className += ' form-field--wide';
+    }
 
     const label = document.createElement('label');
     label.setAttribute('for', 'df-' + f.id);

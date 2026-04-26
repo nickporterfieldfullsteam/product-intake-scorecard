@@ -283,6 +283,17 @@
   .rep-badge.active { background:#EAF3DE; color:#27500A; }
   .rep-badge.inactive { background:#f0f0ee; color:#888; }
   .rep-badge.unregistered { background:#FAEEDA; color:#854F0B; }
+  /* Three-dot menu on each rep card */
+  .rep-menu-btn { position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:6px; border:none; background:transparent; color:#888; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1; padding:0; }
+  .rep-menu-btn:hover { background:#f0f0ee; color:#333; }
+  .rep-menu-popover { position:absolute; top:36px; right:8px; min-width:180px; background:#fff; border:1px solid #e5e5e5; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.08); z-index:10; padding:4px 0; }
+  .rep-menu-popover button { display:block; width:100%; text-align:left; background:transparent; border:none; padding:8px 14px; font-size:13px; color:#1a1a1a; cursor:pointer; }
+  .rep-menu-popover button:hover { background:#f5f5f3; }
+  .rep-menu-popover button.danger { color:#a32d2d; }
+  .rep-menu-popover button.primary { color:#185FA5; }
+  /* Add-rep button at the top of the Reps tab */
+  .add-rep-btn { background:#1a1a1a; color:#fff; border:none; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:500; cursor:pointer; margin-left:auto; }
+  .add-rep-btn:hover { background:#333; }
 
   /* ── KANBAN ── */
   .view-toggle { display:flex; gap:0; margin-bottom:0; border:1px solid #e5e5e5; border-radius:8px; overflow:hidden; width:fit-content; }
@@ -660,25 +671,6 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Rep links</div>
-      <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Generate a personalized intake form link for each rep. Their name and email will be pre-filled and locked so they can't be changed on submission.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div class="field" style="margin-bottom:0;">
-          <label style="font-size:13px;">Rep name</label>
-          <input type="text" id="rep-link-name" placeholder="e.g. Sarah Chen">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label style="font-size:13px;">Rep email</label>
-          <input type="text" id="rep-link-email" placeholder="e.g. sarah@company.com">
-        </div>
-      </div>
-      <div class="btn-row" style="margin-bottom:10px;">
-        <button class="btn-primary" onclick="generateRepLink()">Generate link</button>
-      </div>
-      <div id="rep-links-list"></div>
     </div>
 
     <div class="section">
@@ -1605,8 +1597,8 @@
 </footer>
 
 <script>
-const VERSION = '1.10.0';
-const BUILD_STAMP = '2026-04-25 09:12:13 AM EST';
+const VERSION = '1.10.1';
+const BUILD_STAMP = '2026-04-26 11:40:40 AM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -3171,15 +3163,33 @@ function renderSubmitters() {
       <span style="font-size:12px;color:#ddd;margin:0 4px;">|</span>
       <span style="font-size:12px;color:#888;">Sort by</span>
       ${sortChips}
+      <button class="add-rep-btn" onclick="openAddRepModal()">+ Add rep</button>
     </div>
     <div class="submitter-grid">
       ${filtered.map(r => {
         const groupClass = !r.isRegistered ? 'unregistered' : (r.isActive ? '' : 'inactive');
         const badgeClass = !r.isRegistered ? 'unregistered' : (r.isActive ? 'active' : 'inactive');
         const badgeLabel = !r.isRegistered ? 'Unregistered' : (r.isActive ? 'Active' : 'Inactive');
+        // Build the per-card menu items based on group. Stored as a data
+        // attribute and lazily injected on first click of the trigger.
+        const repKey = r.email || r.name; // matches data-rep-key for repMenuToggle
+        const safeName = (r.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const safeEmail = (r.email || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        let menuItemsHtml;
+        if (!r.isRegistered) {
+          menuItemsHtml = `<button class="primary" onclick="inviteAsRep('${safeEmail}', '${safeName}')">Register as active rep</button>`;
+        } else {
+          const copyBtn = r.email ? `<button onclick="copyPortalLinkForRep('${safeName}', '${safeEmail}')">Copy portal link</button>` : '';
+          const toggleBtn = r.isActive
+            ? `<button class="danger" onclick="setRepActive('${r.repId}', false)">Deactivate rep</button>`
+            : `<button class="primary" onclick="setRepActive('${r.repId}', true)">Reactivate rep</button>`;
+          menuItemsHtml = copyBtn + toggleBtn;
+        }
+        const dataMenuAttr = menuItemsHtml.replace(/"/g, '&quot;');
         return `
-          <div class="submitter-card ${groupClass}" onclick="filterToSubmitter('${escapeHtml(r.email||r.name).replace(/'/g, '\\\'')}')">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div class="submitter-card ${groupClass}" data-rep-key="${escapeHtml(repKey)}" data-rep-menu="${dataMenuAttr}" onclick="filterToSubmitter('${escapeHtml(r.email||r.name).replace(/'/g, '\\\'')}')">
+            <button class="rep-menu-btn" onclick="repMenuToggle('${escapeHtml(repKey).replace(/'/g, '\\\'')}', event)" title="More actions">⋯</button>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-right:30px;">
               <div class="submitter-avatar">${initials(r.name)}</div>
               <div style="flex:1;min-width:0;">
                 <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(r.name)}</div>
@@ -5564,66 +5574,181 @@ function importSubmission() {
 
 
 
-/* ── REP LINKS ── */
-const INTAKE_URL = 'https://nickporterfieldfullsteam.github.io/arbiter/intake';
-let repLinks = []; // TODO Phase 5: load from reps table
+/* ── REP LINKS / PORTAL LINKS ── */
+// Legacy INTAKE_URL pointed at /arbiter/intake which never shipped; the
+// portal lives at /arbiter/portal/. This constant is used by the Reps tab's
+// "Copy portal link" action to generate per-rep ?r=<base64> URLs that
+// pre-fill the portal sign-in field with the rep's email.
+const PORTAL_URL = 'https://nickporterfieldfullsteam.github.io/arbiter/portal/';
 
-function generateRepLink() {
-  const name = (document.getElementById('rep-link-name').value || '').trim();
-  const email = (document.getElementById('rep-link-email').value || '').trim();
-  if (!name || !email) { toast('Please enter both a name and email.'); return; }
-  const payload = btoa(JSON.stringify({ name, email }));
-  const url = INTAKE_URL + '?r=' + encodeURIComponent(payload);
-
-  // Save to list (update if same email already exists)
-  const existing = repLinks.findIndex(r => r.email === email);
-  const entry = { name, email, url, createdAt: new Date().toLocaleDateString() };
-  if (existing !== -1) {
-    repLinks[existing] = entry;
-    toast('Link updated for ' + name + '.');
-  } else {
-    repLinks.unshift(entry);
-    toast('Link generated for ' + name + '.');
-  }
-  // TODO Phase 5: persist rep links to Supabase reps table
-  renderRepLinks();
-
-  // Clear inputs
-  document.getElementById('rep-link-name').value = '';
-  document.getElementById('rep-link-email').value = '';
+/**
+ * Build a per-rep portal URL with a base64-encoded ?r= token containing
+ * { name, email }. The portal reads this token to pre-fill the sign-in
+ * email field. The token is informational only — actual authorization is
+ * enforced by the reps_anon_auth_check policy (migration 004).
+ */
+function buildPortalLink(name, email) {
+  const payload = btoa(JSON.stringify({ name: name || '', email: (email || '').toLowerCase() }));
+  return PORTAL_URL + '?r=' + encodeURIComponent(payload);
 }
 
-function copyRepLinkById(email) {
-  const entry = repLinks.find(r => r.email === email);
-  if (!entry) return;
-  navigator.clipboard.writeText(entry.url).then(() => toast('Link copied for ' + entry.name + '!'));
-}
-
-function deleteRepLink(email) {
-  repLinks = repLinks.filter(r => r.email !== email);
-  // TODO Phase 5: persist rep links to Supabase reps table
-  renderRepLinks();
-  toast('Link removed.');
-}
-
-function renderRepLinks() {
-  const container = document.getElementById('rep-links-list');
-  if (!container) return;
-  if (!repLinks.length) { container.innerHTML = ''; return; }
-  container.innerHTML = `
-    <div style="margin-top:4px;">
-      <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Generated links</p>
-      ${repLinks.map(r => `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0ee;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:500;color:#1a1a1a;">${r.name}</div>
-            <div style="font-size:12px;color:#888;">${r.email} · Generated ${r.createdAt}</div>
-          </div>
-          <button class="btn-secondary" style="font-size:12px;padding:4px 10px;flex-shrink:0;" onclick="copyRepLinkById('${r.email}')">Copy link</button>
-          <button class="btn-danger-inline" style="font-size:12px;" onclick="deleteRepLink('${r.email}')">Remove</button>
-        </div>`).join('')}
+/**
+ * Open the Add Rep modal. Validates name + email locally and inserts
+ * into the reps table on submit. Active by default.
+ */
+function openAddRepModal(prefillEmail, prefillName) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:440px;">
+      <h2>Add rep</h2>
+      <p style="font-size:13px;color:#888;">They'll be able to sign in to the portal and submit projects to this workspace.</p>
+      <div class="field">
+        <label style="font-size:13px;">Name</label>
+        <input type="text" id="add-rep-name" placeholder="e.g. Sarah Chen" value="${escapeHtml(prefillName || '')}">
+      </div>
+      <div class="field">
+        <label style="font-size:13px;">Email</label>
+        <input type="email" id="add-rep-email" placeholder="e.g. sarah@company.com" value="${escapeHtml(prefillEmail || '')}">
+      </div>
+      <div class="modal-btns">
+        <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="btn-primary" onclick="addRep()">Add rep</button>
+      </div>
     </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  setTimeout(() => {
+    const focusEl = prefillEmail
+      ? document.getElementById('add-rep-name')
+      : document.getElementById('add-rep-name');
+    if (focusEl) focusEl.focus();
+  }, 50);
 }
+
+/**
+ * Submit handler for the Add Rep modal. Inserts a row into the reps table
+ * (active by default), refreshes loaded reps, and re-renders.
+ */
+async function addRep() {
+  const name = (document.getElementById('add-rep-name').value || '').trim();
+  const email = (document.getElementById('add-rep-email').value || '').trim().toLowerCase();
+  if (!name || !email) { toast('Please enter both a name and email.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('That email looks invalid.'); return; }
+  if (!currentWorkspaceId) { toast('No workspace loaded.'); return; }
+  // Refuse duplicates by checking the in-memory list first; the unique index
+  // would catch it server-side but a clear error is friendlier.
+  if (reps.some(r => r.email === email)) {
+    toast('A rep with that email already exists.');
+    return;
+  }
+  const { error } = await _sb.from('reps').insert({
+    workspace_id: currentWorkspaceId,
+    email,
+    name,
+    is_active: true,
+  });
+  if (error) {
+    console.error('[Arbiter] Add rep error:', error);
+    toast('Couldn\'t add rep: ' + (error.message || 'unknown error'));
+    return;
+  }
+  document.querySelector('.modal-overlay')?.remove();
+  toast('Rep added.');
+  await loadReps();
+  if (document.getElementById('tab-submitters').classList.contains('active')) renderSubmitters();
+}
+
+/**
+ * Toggle a rep's is_active flag in the reps table. Triggered from the
+ * three-dot menu's "Deactivate" / "Reactivate" item.
+ */
+async function setRepActive(repId, isActive) {
+  if (!repId) return;
+  const { error } = await _sb.from('reps').update({ is_active: isActive }).eq('id', repId);
+  if (error) {
+    console.error('[Arbiter] Set rep active error:', error);
+    toast('Couldn\'t update rep: ' + (error.message || 'unknown error'));
+    return;
+  }
+  toast(isActive ? 'Rep reactivated.' : 'Rep deactivated.');
+  await loadReps();
+  renderSubmitters();
+}
+
+/**
+ * Invite an unregistered submitter as a new active rep. Shows a confirmation
+ * dialog before inserting, since this grants portal access.
+ */
+async function inviteAsRep(email, name) {
+  if (!email) return;
+  const ok = window.confirm(
+    'Register ' + email + ' as an active rep?\n\nThey\'ll be able to sign in to the portal and submit new projects to this workspace.'
+  );
+  if (!ok) return;
+  if (!currentWorkspaceId) { toast('No workspace loaded.'); return; }
+  const { error } = await _sb.from('reps').insert({
+    workspace_id: currentWorkspaceId,
+    email: email.toLowerCase(),
+    name: name || email,
+    is_active: true,
+  });
+  if (error) {
+    console.error('[Arbiter] Invite as rep error:', error);
+    toast('Couldn\'t register rep: ' + (error.message || 'unknown error'));
+    return;
+  }
+  toast('Rep registered.');
+  await loadReps();
+  renderSubmitters();
+}
+
+/**
+ * Copy a per-rep portal URL to the clipboard.
+ */
+function copyPortalLinkForRep(name, email) {
+  if (!email) return;
+  const url = buildPortalLink(name, email);
+  navigator.clipboard.writeText(url)
+    .then(() => toast('Portal link copied for ' + (name || email) + '.'))
+    .catch(() => toast('Couldn\'t copy to clipboard.'));
+}
+
+/**
+ * Toggle the three-dot menu open/closed on a rep card. Closes any other
+ * open rep menu first.
+ */
+function repMenuToggle(repKey, ev) {
+  if (ev) ev.stopPropagation();
+  // Close all other open menus
+  document.querySelectorAll('.rep-menu-popover').forEach(m => {
+    if (m.dataset.key !== repKey) m.remove();
+  });
+  // Toggle this one
+  const card = document.querySelector('.submitter-card[data-rep-key="' + repKey.replace(/"/g, '\\"') + '"]');
+  if (!card) return;
+  const existing = card.querySelector('.rep-menu-popover');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+  const menuHtml = card.dataset.repMenu;
+  if (menuHtml) {
+    const div = document.createElement('div');
+    div.className = 'rep-menu-popover';
+    div.dataset.key = repKey;
+    div.innerHTML = menuHtml;
+    div.addEventListener('click', e => e.stopPropagation()); // don't bubble to card
+    card.appendChild(div);
+  }
+}
+
+// Close any open rep menu when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.rep-menu-btn') && !e.target.closest('.rep-menu-popover')) {
+    document.querySelectorAll('.rep-menu-popover').forEach(m => m.remove());
+  }
+});
 
 /* ── SAMPLE DATA GENERATOR ── */
 async function clearSampleProjects() {
@@ -5900,7 +6025,7 @@ function runAutoQA() {
   check('qa-0-6', 'Reset to defaults function exists', () => typeof resetSettings === 'function');
   check('qa-0-7', 'Export projects backup function exists', () => typeof exportProjects === 'function');
   check('qa-0-8', 'Import projects backup function exists', () => typeof importProjects === 'function');
-  check('qa-0-11', 'Rep link generator exists', () => typeof generateRepLink === 'function');
+  check('qa-0-11', 'Add rep function exists', () => typeof addRep === 'function');
   check('qa-0-12', 'Generate sample projects exists', () => typeof generateSampleProjects === 'function');
   check('qa-0-13', 'Clear sample projects exists', () => typeof clearSampleProjects === 'function');
 
@@ -6134,7 +6259,7 @@ function showTab(tab) {
   if (tab === 'editor') { renderEditor(); renderDetailEditor(); }
   if (tab === 'help') { renderSalesHelpEditor(); setTimeout(loadQA, 50); }
   if (tab === 'settings') {
-    buildSettingsEmailJS(); renderRepLinks();
+    buildSettingsEmailJS();
     const emailEl = document.getElementById('settings-user-email');
     if (emailEl) emailEl.textContent = currentUser?.email || '';
   }
@@ -6387,7 +6512,7 @@ function showConfigTab(tab) {
     if (tab === 'weights') { buildPresetButtons(); buildWeightSliders(); buildTierThresholds(); buildProjectTypeMappings(); }
     if (tab === 'editor') { renderEditor(); renderDetailEditor(); }
     if (tab === 'settings') {
-      buildSettingsEmailJS(); renderRepLinks();
+      buildSettingsEmailJS();
       const emailEl = document.getElementById('settings-user-email');
       if (emailEl) emailEl.textContent = currentUser?.email || '';
     }

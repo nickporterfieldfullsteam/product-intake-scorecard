@@ -264,16 +264,25 @@
   #project-search { width:100% !important; }
   #list-filter-bar select:focus { outline:none; border-color:#888; }
 
-  /* ── SUBMITTERS ── */
+  /* ── SUBMITTERS / REPS ── */
   .submitter-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
-  .submitter-card { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:14px 16px; cursor:pointer; transition:box-shadow 0.15s,border-color 0.15s; }
+  .submitter-card { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:14px 16px; cursor:pointer; transition:box-shadow 0.15s,border-color 0.15s; position:relative; }
   .submitter-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.08); border-color:#ccc; }
+  .submitter-card.inactive { opacity:0.55; background:#fafaf9; }
+  .submitter-card.inactive:hover { opacity:0.85; }
+  .submitter-card.unregistered { border-left:3px solid #BA7517; }
   .submitter-avatar { width:36px; height:36px; border-radius:50%; background:#E6F1FB; color:#185FA5; font-size:13px; font-weight:500; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .submitter-card.inactive .submitter-avatar { background:#f0f0ee; color:#888; }
+  .submitter-card.unregistered .submitter-avatar { background:#FAEEDA; color:#854F0B; }
   .submitter-stat { text-align:center; }
   .submitter-stat-value { font-size:18px; font-weight:500; color:#1a1a1a; line-height:1.1; }
   .submitter-stat-label { font-size:11px; color:#888; margin-top:2px; }
   .submitter-bar { display:flex; height:4px; border-radius:2px; overflow:hidden; gap:1px; margin-top:8px; }
-  .submitter-sort-bar { display:flex; align-items:center; gap:8px; margin-bottom:1rem; }
+  .submitter-sort-bar { display:flex; align-items:center; gap:8px; margin-bottom:1rem; flex-wrap:wrap; }
+  .rep-badge { display:inline-block; font-size:10px; font-weight:500; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em; }
+  .rep-badge.active { background:#EAF3DE; color:#27500A; }
+  .rep-badge.inactive { background:#f0f0ee; color:#888; }
+  .rep-badge.unregistered { background:#FAEEDA; color:#854F0B; }
 
   /* ── KANBAN ── */
   .view-toggle { display:flex; gap:0; margin-bottom:0; border:1px solid #e5e5e5; border-radius:8px; overflow:hidden; width:fit-content; }
@@ -389,7 +398,7 @@
 
   <div class="tabs" id="main-tabs">
     <button class="tab" onclick="showTab('tracker')" id="tab-btn-tracker">Dashboard</button>
-    <button class="tab" onclick="showTab('submitters')" id="tab-btn-submitters">Submitters</button>
+    <button class="tab" onclick="showTab('submitters')" id="tab-btn-submitters">Reps</button>
     <button class="tab" onclick="showTab('insights')" id="tab-btn-insights">Insights</button>
     <button class="tab" onclick="showTab('help')" id="tab-btn-help">Help</button>
   </div>
@@ -1596,8 +1605,8 @@
 </footer>
 
 <script>
-const VERSION = '1.9.8';
-const BUILD_STAMP = '2026-04-23 08:42:23 PM EST';
+const VERSION = '1.10.0';
+const BUILD_STAMP = '2026-04-25 09:12:13 AM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1607,6 +1616,21 @@ let _initInFlight = false;
 let _signedInHandled = false;
 
 function uid() { return 'c' + Math.random().toString(36).slice(2,9); }
+
+/**
+ * Defensive HTML escape for any user-provided string interpolated into
+ * innerHTML. The main app is admin-only, but rep/submitter names can come
+ * from the portal where reps type their own name, so we still escape them.
+ */
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 const STATUS_CONFIG = {
   'Submitted':    { cls: 'status-submitted',   color: '#185FA5', bg: '#E6F1FB' },
@@ -1720,6 +1744,7 @@ let projectTypeMappings = [
   { id: uid(), label: 'Internal project',  presetKey: 'strategic' },
 ];
 let projects = [];
+let reps = []; // Loaded from Supabase reps table; populated by loadReps() at init
 
 /* ── SUPABASE SYNC ── */
 async function persist() {
@@ -1781,6 +1806,33 @@ async function loadProjects() {
       updated_at: p.updated_at
     }));
   }
+}
+
+/**
+ * Load registered reps for the current workspace. Reps are the authoritative
+ * list of who can submit to this workspace's portal (enforced by RLS as of
+ * migration 003). Separately, projects.submitter_email identifies who has
+ * historically submitted; renderSubmitters combines the two sources to
+ * distinguish active reps, inactive reps, and unregistered submitters.
+ */
+async function loadReps() {
+  if (!currentWorkspaceId) return;
+  const { data, error } = await _sb.from('reps')
+    .select('id, email, name, is_active, created_at')
+    .eq('workspace_id', currentWorkspaceId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.warn('[Arbiter] Failed to load reps:', error);
+    reps = [];
+    return;
+  }
+  reps = (data || []).map(r => ({
+    id: r.id,
+    email: (r.email || '').toLowerCase(),
+    name: r.name || '',
+    isActive: r.is_active,
+    createdAt: r.created_at,
+  }));
 }
 
 async function sbUpsertProject(proj) {
@@ -2978,31 +3030,89 @@ function renderInsights() {
 /* ── SUBMITTERS ── */
 let submitterSort = 'count';
 
+/**
+ * Active status filter for the Reps tab. Values: 'All' | 'Active' | 'Inactive'
+ * | 'Unregistered'. Persists across renders within a session.
+ */
+let repsGroupFilter = 'All';
+
+/**
+ * Render the Reps tab. Combines two data sources:
+ *   1. `reps` — the authoritative list of who's authorized to submit (from
+ *      Supabase reps table, loaded at init by loadReps).
+ *   2. `projects` — historical submissions, aggregated by submitter_email
+ *      for per-rep stats.
+ *
+ * Each rep is classified into one of three groups:
+ *   - Active: in reps table AND is_active = true
+ *   - Inactive: in reps table AND is_active = false
+ *   - Unregistered: email appears in projects.locked_vals.__email__ but NOT
+ *     in reps. These historical submitters can't submit anymore under
+ *     migration 003's RLS; the admin can convert them by registering in C.3.b.
+ *
+ * Cards show name, email, group badge, per-rep stats (submissions count,
+ * avg score, accept rate, status mix bar, last submission date). Clicking
+ * a card opens the Tracker filtered to that rep's projects (existing
+ * filterToSubmitter behavior, preserved).
+ */
 function renderSubmitters() {
   const container = document.getElementById('submitters-content');
   if (!container) return;
 
-  if (!projects.length) {
-    container.innerHTML = '<div class="empty-state">No projects yet. Submissions will appear here once reps start submitting.</div>';
-    return;
-  }
-
-  // Aggregate by submitter email
-  const map = {};
+  // Aggregate project stats by normalized email (primary key) or name (fallback)
+  const projectsByKey = {};
   projects.forEach(p => {
-    const email = (p.lockedVals && p.lockedVals['__email__']) || '';
+    const emailRaw = (p.lockedVals && p.lockedVals['__email__']) || '';
+    const email = emailRaw.toLowerCase();
     const name  = (p.lockedVals && p.lockedVals['__submitter__']) || 'Unknown';
     if (!email && name === 'Unknown') return;
     const key = email || name;
-    if (!map[key]) map[key] = { name, email, projects: [] };
-    map[key].projects.push(p);
+    if (!projectsByKey[key]) projectsByKey[key] = { name, email, projects: [] };
+    projectsByKey[key].projects.push(p);
   });
 
-  let reps = Object.values(map).map(r => {
+  // Start with the reps table as the authoritative source
+  const byEmail = {}; // normalized email -> rep record
+  reps.forEach(r => {
+    const email = (r.email || '').toLowerCase();
+    const projGroup = projectsByKey[email];
+    byEmail[email] = {
+      key: email,
+      name: r.name || (projGroup?.name || 'Unnamed rep'),
+      email,
+      isRegistered: true,
+      isActive: r.isActive,
+      repId: r.id,
+      createdAt: r.createdAt,
+      projects: projGroup?.projects || [],
+    };
+  });
+
+  // Add any project-only submitters (unregistered) that aren't in reps
+  Object.values(projectsByKey).forEach(pg => {
+    const email = pg.email;
+    // Skip if already covered by a rep row; skip name-only (no email) entries
+    // for unregistered classification — we need an email to invite them.
+    if (!email) return;
+    if (byEmail[email]) return;
+    byEmail[email] = {
+      key: email,
+      name: pg.name,
+      email,
+      isRegistered: false,
+      isActive: false,
+      repId: null,
+      createdAt: null,
+      projects: pg.projects,
+    };
+  });
+
+  // Compute derived stats per rep
+  const withStats = Object.values(byEmail).map(r => {
     const total = r.projects.length;
     const decided = r.projects.filter(p => ['Accepted','Completed','Deferred','Passed'].includes(p.status));
     const accepted = r.projects.filter(p => p.status === 'Accepted').length;
-    const avgScore = Math.round(r.projects.reduce((s,p) => s+(p.score||0), 0) / total);
+    const avgScore = total ? Math.round(r.projects.reduce((s,p) => s+(p.score||0), 0) / total) : null;
     const acceptRate = decided.length ? Math.round((accepted/decided.length)*100) : null;
     const dates = r.projects.map(p => new Date(p.date)).filter(d => !isNaN(d));
     const lastDate = dates.length ? new Date(Math.max(...dates)).toLocaleDateString() : '—';
@@ -3011,54 +3121,92 @@ function renderSubmitters() {
     return { ...r, total, avgScore, acceptRate, lastDate, statusCounts, decided: decided.length };
   });
 
-  // Sort
-  reps.sort((a,b) => {
+  // Empty state
+  if (!withStats.length) {
+    container.innerHTML = '<div class="empty-state">No reps or submissions yet. Add your first rep or wait for submissions to come in.</div>';
+    return;
+  }
+
+  // Group counts for filter chips
+  const groupCounts = {
+    All: withStats.length,
+    Active: withStats.filter(r => r.isRegistered && r.isActive).length,
+    Inactive: withStats.filter(r => r.isRegistered && !r.isActive).length,
+    Unregistered: withStats.filter(r => !r.isRegistered).length,
+  };
+
+  // Apply group filter
+  let filtered = withStats;
+  if (repsGroupFilter === 'Active') filtered = withStats.filter(r => r.isRegistered && r.isActive);
+  else if (repsGroupFilter === 'Inactive') filtered = withStats.filter(r => r.isRegistered && !r.isActive);
+  else if (repsGroupFilter === 'Unregistered') filtered = withStats.filter(r => !r.isRegistered);
+
+  // Sort within the filtered group
+  filtered.sort((a,b) => {
     if (submitterSort === 'count') return b.total - a.total;
-    if (submitterSort === 'score') return b.avgScore - a.avgScore;
-    if (submitterSort === 'rate') return (b.acceptRate||0) - (a.acceptRate||0);
+    if (submitterSort === 'score') return (b.avgScore||0) - (a.avgScore||0);
+    if (submitterSort === 'rate')  return (b.acceptRate||0) - (a.acceptRate||0);
     return 0;
   });
 
   const statusColors = { 'Submitted':'#185FA5','Under Review':'#BA7517','Accepted':'#3B6D11','Completed':'#0C447C','Deferred':'#633806','Passed':'#a32d2d' };
-  const initials = name => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const initials = name => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) || '?';
+
+  // Render
+  const groups = ['All', 'Active', 'Inactive', 'Unregistered'];
+  const filterChips = groups.map(g => {
+    const active = repsGroupFilter === g;
+    const count = groupCounts[g];
+    return `<button class="kanban-sort-btn${active?' active':''}" onclick="repsGroupFilter='${g}';renderSubmitters();">${g} <span style="opacity:0.7;font-size:11px;margin-left:2px;">${count}</span></button>`;
+  }).join('');
+
+  const sortChips = [['count','Submissions'],['score','Avg score'],['rate','Acceptance rate']].map(([val,label]) =>
+    `<button class="kanban-sort-btn${submitterSort===val?' active':''}" onclick="submitterSort='${val}';renderSubmitters();">${label}</button>`
+  ).join('');
 
   container.innerHTML = `
     <div class="submitter-sort-bar">
+      <span style="font-size:12px;color:#888;">Show</span>
+      ${filterChips}
+      <span style="font-size:12px;color:#ddd;margin:0 4px;">|</span>
       <span style="font-size:12px;color:#888;">Sort by</span>
-      ${[['count','Submissions'],['score','Avg score'],['rate','Acceptance rate']].map(([val,label]) =>
-        `<button class="kanban-sort-btn${submitterSort===val?' active':''}" onclick="submitterSort='${val}';renderSubmitters();">${label}</button>`
-      ).join('')}
-      <span style="font-size:12px;color:#aaa;margin-left:auto;">${reps.length} rep${reps.length!==1?'s':''}</span>
+      ${sortChips}
     </div>
     <div class="submitter-grid">
-      ${reps.map(r => `
-        <div class="submitter-card" onclick="filterToSubmitter('${r.email||r.name}')">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-            <div class="submitter-avatar">${initials(r.name)}</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.name}</div>
-              <div style="font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.email||'No email'}</div>
+      ${filtered.map(r => {
+        const groupClass = !r.isRegistered ? 'unregistered' : (r.isActive ? '' : 'inactive');
+        const badgeClass = !r.isRegistered ? 'unregistered' : (r.isActive ? 'active' : 'inactive');
+        const badgeLabel = !r.isRegistered ? 'Unregistered' : (r.isActive ? 'Active' : 'Inactive');
+        return `
+          <div class="submitter-card ${groupClass}" onclick="filterToSubmitter('${escapeHtml(r.email||r.name).replace(/'/g, '\\\'')}')">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+              <div class="submitter-avatar">${initials(r.name)}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(r.name)}</div>
+                <div style="font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(r.email)||'No email'}</div>
+              </div>
+              <span class="rep-badge ${badgeClass}">${badgeLabel}</span>
             </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-            <div class="submitter-stat">
-              <div class="submitter-stat-value">${r.total}</div>
-              <div class="submitter-stat-label">Submitted</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+              <div class="submitter-stat">
+                <div class="submitter-stat-value">${r.total}</div>
+                <div class="submitter-stat-label">Submitted</div>
+              </div>
+              <div class="submitter-stat">
+                <div class="submitter-stat-value">${r.avgScore !== null ? r.avgScore : '—'}</div>
+                <div class="submitter-stat-label">Avg score</div>
+              </div>
+              <div class="submitter-stat">
+                <div class="submitter-stat-value">${r.acceptRate !== null ? r.acceptRate+'%' : '—'}</div>
+                <div class="submitter-stat-label">Accept rate</div>
+              </div>
             </div>
-            <div class="submitter-stat">
-              <div class="submitter-stat-value">${r.avgScore}</div>
-              <div class="submitter-stat-label">Avg score</div>
-            </div>
-            <div class="submitter-stat">
-              <div class="submitter-stat-value">${r.acceptRate !== null ? r.acceptRate+'%' : '—'}</div>
-              <div class="submitter-stat-label">Accept rate</div>
-            </div>
-          </div>
-          <div class="submitter-bar">
-            ${STATUS_ORDER.map(s => r.statusCounts[s] ? `<div style="flex:${r.statusCounts[s]};background:${statusColors[s]};border-radius:2px;" title="${s}: ${r.statusCounts[s]}"></div>` : '').join('')}
-          </div>
-          <div style="font-size:11px;color:#bbb;margin-top:6px;text-align:right;">Last submission ${r.lastDate}</div>
-        </div>`).join('')}
+            ${r.total ? `<div class="submitter-bar">
+              ${STATUS_ORDER.map(s => r.statusCounts[s] ? `<div style="flex:${r.statusCounts[s]};background:${statusColors[s]};border-radius:2px;" title="${s}: ${r.statusCounts[s]}"></div>` : '').join('')}
+            </div>` : ''}
+            <div style="font-size:11px;color:#bbb;margin-top:6px;text-align:right;">Last submission ${r.lastDate}</div>
+          </div>`;
+      }).join('')}
     </div>`;
 }
 
@@ -5996,6 +6144,7 @@ async function init() {
   try {
     await loadConfig();
     await loadProjects();
+    await loadReps();
   } catch(e) {
     console.error('[Arbiter] Init load error:', e);
   }

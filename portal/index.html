@@ -261,7 +261,13 @@
 
 <script>
 /* ============================================================
- * Arbiter Portal — v0.4.3
+ * Arbiter Portal — v0.5.0
+ *
+ * v0.5.0: date field type with optional minimum-days-from-today
+ *   constraint. Admins define the field in the main app's editor
+ *   (type=date, min_days_from_now=N). Portal renders it as an
+ *   <input type="date"> with the min attribute set to today + N
+ *   days, plus submit-time JS validation as backup.
  *
  * v0.4.3: visual separators between detail-panel subsections.
  *   Status / PM notes / Project details / Scoring criteria now
@@ -291,8 +297,8 @@
  * Raw-fetch architecture unchanged from v0.3.0+: no Supabase JS client.
  * ============================================================ */
 
-const VERSION = '0.4.3';
-const BUILD_STAMP = '2026-04-26 05:01:08 PM EST';
+const VERSION = '0.5.0';
+const BUILD_STAMP = '2026-04-26 05:07:02 PM EST';
 
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
@@ -857,6 +863,15 @@ function buildDetailFields() {
     } else {
       input = document.createElement('input');
       input.type = f.type || 'text';
+      // Date fields can have a minimum-days-from-now constraint that
+      // sets the input's min attribute. Browser blocks earlier dates from
+      // being picked; submit-time JS validation in collectFormValues()
+      // catches manual bypass attempts.
+      if (f.type === 'date' && Number.isInteger(f.min_days_from_now) && f.min_days_from_now >= 0) {
+        const minDate = new Date();
+        minDate.setDate(minDate.getDate() + f.min_days_from_now);
+        input.min = minDate.toISOString().slice(0, 10); // YYYY-MM-DD
+      }
     }
     input.id = 'df-' + f.id;
     if (f.placeholder) input.placeholder = f.placeholder;
@@ -956,6 +971,23 @@ function collectFormValues() {
     const val = (el?.value || '').trim();
     if (f.required && !val) {
       return { ok: false, error: 'Missing required field: ' + f.label };
+    }
+    // Date min-days check. The input's min attribute also enforces this in
+    // the browser, but we re-validate here in case the rep bypassed the
+    // picker (typed manually, devtools, etc). Calendar days from today.
+    if (val && f.type === 'date' && Number.isInteger(f.min_days_from_now) && f.min_days_from_now >= 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const minDate = new Date(today);
+      minDate.setDate(minDate.getDate() + f.min_days_from_now);
+      const picked = new Date(val + 'T00:00:00');
+      if (picked < minDate) {
+        const dayWord = f.min_days_from_now === 1 ? 'day' : 'days';
+        return {
+          ok: false,
+          error: `${f.label} must be at least ${f.min_days_from_now} ${dayWord} from today.`,
+        };
+      }
     }
     detailVals[f.id] = val;
   }

@@ -1597,8 +1597,8 @@
 </footer>
 
 <script>
-const VERSION = '1.10.3';
-const BUILD_STAMP = '2026-04-26 12:55:02 PM EST';
+const VERSION = '1.11.0';
+const BUILD_STAMP = '2026-04-26 05:07:02 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1982,6 +1982,9 @@ function buildDetailFields() {
     } else if (f.type === 'select') {
       const opts = (f.options || '').split(',').map(o => o.trim()).filter(Boolean);
       input = `<select id="df-${f.id}"><option value="">Select...</option>${opts.map(o=>`<option value="${o}">${o}</option>`).join('')}</select>`;
+    } else if (f.type === 'date') {
+      // Admin form: no min restriction (admin can backfill any date).
+      input = `<input type="date" id="df-${f.id}">`;
     } else {
       const t = f.type === 'number' ? 'number' : 'text';
       input = `<input type="${t}" id="df-${f.id}" placeholder="${f.placeholder || ''}">`;
@@ -2030,6 +2033,7 @@ function renderDetailEditor() {
               <option value="number" ${f.type==='number'?'selected':''}>Number</option>
               <option value="textarea" ${f.type==='textarea'?'selected':''}>Long text</option>
               <option value="select" ${f.type==='select'?'selected':''}>Dropdown</option>
+              <option value="date" ${f.type==='date'?'selected':''}>Date</option>
             </select>
           </div>
         </div>
@@ -2038,6 +2042,7 @@ function renderDetailEditor() {
           <input type="text" value="${(f.placeholder||'').replace(/"/g,'&quot;')}" oninput="updateDetailField('${f.id}','placeholder',this.value)" placeholder="Optional hint inside the field">
         </div>
         ${f.type==='select' ? `<div class="field"><label style="font-size:13px;">Dropdown options <span style="font-weight:400;color:#888">(comma-separated)</span></label><input type="text" value="${(f.options||'').replace(/"/g,'&quot;')}" oninput="updateDetailField('${f.id}','options',this.value)" placeholder="e.g. Option A, Option B, Option C"></div>` : ''}
+        ${f.type==='date' ? `<div class="field"><label style="font-size:13px;">Minimum days from today <span style="font-weight:400;color:#888">(blank for none)</span></label><input type="number" min="0" value="${f.min_days_from_now ?? ''}" oninput="updateDetailField('${f.id}','min_days_from_now',this.value === '' ? null : Math.max(0, parseInt(this.value, 10) || 0))" placeholder="e.g. 2 for 48-hour minimum"></div>` : ''}
         ${!f.locked ? `<div class="field" style="display:flex;align-items:center;gap:10px;margin-top:4px;">
           <input type="checkbox" id="req-${f.id}" ${f.required?'checked':''} onchange="updateDetailField('${f.id}','required',this.checked)" style="width:auto;accent-color:#1a1a1a;">
           <label for="req-${f.id}" style="font-size:13px;font-weight:400;margin:0;cursor:pointer;">Required field</label>
@@ -5200,6 +5205,8 @@ function buildDetailFields() {
     } else if (f.type === 'select') {
       const opts = (f.options || '').split(',').map(o => o.trim()).filter(Boolean);
       input = \`<select id="df-\${f.id}"><option value="">Select...</option>\${opts.map(o=>\`<option value="\${o}">\${o}</option>\`).join('')}</select>\`;
+    } else if (f.type === 'date') {
+      input = \`<input type="date" id="df-\${f.id}">\`;
     } else {
       input = \`<input type="\${f.type === 'number' ? 'number' : 'text'}" id="df-\${f.id}" placeholder="\${f.placeholder || ''}">\`;
     }

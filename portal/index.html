@@ -117,6 +117,11 @@
   /* Inline detail panel (ported from admin, adapted for read-only rep) */
   .proj-detail-panel { display:none; padding:12px 14px; border-top:1px solid #f0f0ee; background:#fafaf9; }
   .proj-detail-panel.open { display:block; }
+  /* Section divider inside the detail panel — mirrors the action-row separator
+     to give clear visual breaks between Status / PM notes / Project details /
+     Scoring criteria sub-sections. */
+  .panel-section { padding-top: 0.875rem; margin-top: 0.875rem; border-top: 1px solid #e5e5e5; }
+  .panel-section-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
   .proj-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
   @media(max-width:540px) { .proj-detail-grid { grid-template-columns:1fr; } }
   .detail-kv { margin-bottom: 0.6rem; }
@@ -256,7 +261,13 @@
 
 <script>
 /* ============================================================
- * Arbiter Portal — v0.4.2
+ * Arbiter Portal — v0.4.3
+ *
+ * v0.4.3: visual separators between detail-panel subsections.
+ *   Status / PM notes / Project details / Scoring criteria now
+ *   each have a 1px top border and uppercase section title to
+ *   match the main app's section visual language. Previously
+ *   ran together with no horizontal delimiters.
  *
  * v0.4.2 (Phase 3 Step C.2): pre-auth rep check.
  *   Before sending a magic-link OTP, the portal queries the reps
@@ -280,8 +291,8 @@
  * Raw-fetch architecture unchanged from v0.3.0+: no Supabase JS client.
  * ============================================================ */
 
-const VERSION = '0.4.2';
-const BUILD_STAMP = '2026-04-24 09:14:28 AM EST';
+const VERSION = '0.4.3';
+const BUILD_STAMP = '2026-04-26 01:00:18 PM EST';
 
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
@@ -1341,8 +1352,8 @@ function renderProjectDetailBody(p) {
   // PM notes if present
   if (decisionNotes) {
     topHtml += `
-      <div class="detail-kv" style="margin-bottom:1rem;">
-        <div class="k">PM notes</div>
+      <div class="panel-section">
+        <div class="panel-section-title">PM notes</div>
         <div class="v">${escapeHtml(decisionNotes)}</div>
       </div>
     `;
@@ -1353,7 +1364,7 @@ function renderProjectDetailBody(p) {
   const details = p.detail_vals || {};
   const detailFieldsConfig = (workspaceConfig?.detail_fields || []);
 
-  let detailsHtml = '<div style="margin-bottom:1rem;"><div class="k" style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Project details</div>';
+  let detailsHtml = '<div class="panel-section"><div class="panel-section-title">Project details</div>';
   detailsHtml += '<div class="proj-detail-grid">';
   detailsHtml += `<div><div class="detail-kv"><div class="k">Type</div><div class="v ${p.project_type ? '' : 'empty'}">${p.project_type ? escapeHtml(p.project_type) : '(not set)'}</div></div></div>`;
   detailsHtml += `<div></div>`;
@@ -1397,7 +1408,7 @@ function renderProjectDetailBody(p) {
 
   let critHtml = '';
   if (criteriaToShow.length > 0) {
-    critHtml = '<div style="margin-bottom:1rem;"><div class="k" style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Scoring criteria</div>';
+    critHtml = '<div class="panel-section"><div class="panel-section-title">Scoring criteria</div>';
     criteriaToShow.forEach(c => {
       const storedScore = picked[c.id];
       let pickedLabel = '(not answered)';

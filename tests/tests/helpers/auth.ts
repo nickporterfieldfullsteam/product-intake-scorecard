@@ -41,6 +41,18 @@ export async function signOut(page: Page) {
 }
 
 /**
+ * Navigate to the Editor tab (where criteria + detail fields are configured).
+ * Flow: click gear → drawer opens → click "Edit criteria" → drawer closes,
+ * #tab-editor becomes active.
+ */
+export async function openEditorTab(page: Page) {
+  await page.locator('#btn-config').click();
+  await page.locator('#config-drawer').waitFor({ state: 'visible' });
+  await page.locator('#config-drawer').getByRole('button', { name: /edit criteria/i }).click();
+  await page.locator('#tab-editor').waitFor({ state: 'visible' });
+}
+
+/**
  * Navigate to the Settings tab (where sign-out, sample data, backups live).
  * Flow: click gear → drawer opens → click "Settings" → drawer closes, #tab-settings becomes active.
  */

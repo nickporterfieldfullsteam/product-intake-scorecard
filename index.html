@@ -1597,8 +1597,8 @@
 </footer>
 
 <script>
-const VERSION = '1.10.2';
-const BUILD_STAMP = '2026-04-26 12:20:40 PM EST';
+const VERSION = '1.10.3';
+const BUILD_STAMP = '2026-04-26 12:55:02 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -2014,7 +2014,7 @@ function renderDetailEditor() {
         <span class="drag-handle" title="Drag to reorder" onclick="event.stopPropagation()">⠿</span>
         <div class="criterion-header-label" id="dflabel-${f.id}">${f.label}</div>
         <div class="criterion-header-meta">${f.type}${f.required ? ' · required' : ''}</div>
-        ${f.required ? '' : `<button class="btn-danger-sm" onclick="event.stopPropagation();removeDetailField('${f.id}')">Remove</button>`}
+        ${f.locked ? '' : `<button class="btn-danger-sm" onclick="event.stopPropagation();removeDetailField('${f.id}')">Remove</button>`}
         <span class="chevron" id="dfchevron-${f.id}">▾</span>
       </div>
       <div class="criterion-body" id="dfbody-${f.id}">
@@ -2025,7 +2025,7 @@ function renderDetailEditor() {
           </div>
           <div class="field">
             <label style="font-size:13px;">Field type</label>
-            <select onchange="updateDetailField('${f.id}','type',this.value)" ${f.required?'disabled':''}>
+            <select onchange="updateDetailField('${f.id}','type',this.value)" ${f.locked?'disabled':''}>
               <option value="text" ${f.type==='text'?'selected':''}>Short text</option>
               <option value="number" ${f.type==='number'?'selected':''}>Number</option>
               <option value="textarea" ${f.type==='textarea'?'selected':''}>Long text</option>
@@ -2038,7 +2038,7 @@ function renderDetailEditor() {
           <input type="text" value="${(f.placeholder||'').replace(/"/g,'&quot;')}" oninput="updateDetailField('${f.id}','placeholder',this.value)" placeholder="Optional hint inside the field">
         </div>
         ${f.type==='select' ? `<div class="field"><label style="font-size:13px;">Dropdown options <span style="font-weight:400;color:#888">(comma-separated)</span></label><input type="text" value="${(f.options||'').replace(/"/g,'&quot;')}" oninput="updateDetailField('${f.id}','options',this.value)" placeholder="e.g. Option A, Option B, Option C"></div>` : ''}
-        ${!f.required ? `<div class="field" style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+        ${!f.locked ? `<div class="field" style="display:flex;align-items:center;gap:10px;margin-top:4px;">
           <input type="checkbox" id="req-${f.id}" ${f.required?'checked':''} onchange="updateDetailField('${f.id}','required',this.checked)" style="width:auto;accent-color:#1a1a1a;">
           <label for="req-${f.id}" style="font-size:13px;font-weight:400;margin:0;cursor:pointer;">Required field</label>
         </div>` : `<div style="font-size:12px;color:#888;margin-top:4px;">This field is locked as required.</div>`}
@@ -2060,7 +2060,11 @@ function updateDetailField(id, key, val) {
   f[key] = val; persist();
   const labelEl = document.getElementById('dflabel-' + id); if (labelEl && key === 'label') labelEl.textContent = val;
   buildDetailFields();
-  if (key === 'type' || key === 'options') { renderDetailEditor(); document.getElementById('dfbody-'+id).classList.add('open'); document.getElementById('dfchevron-'+id).classList.add('open'); }
+  // Re-render the editor only when the field TYPE changes, since that swaps
+  // which sub-widgets are shown (e.g., the "Dropdown options" input only
+  // appears for type === 'select'). Re-rendering on every keystroke of
+  // 'options' would destroy the input element and steal focus mid-typing.
+  if (key === 'type') { renderDetailEditor(); document.getElementById('dfbody-'+id).classList.add('open'); document.getElementById('dfchevron-'+id).classList.add('open'); }
 }
 
 function removeDetailField(id) {

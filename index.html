@@ -1597,8 +1597,8 @@
 </footer>
 
 <script>
-const VERSION = '1.10.1';
-const BUILD_STAMP = '2026-04-26 11:49:41 AM EST';
+const VERSION = '1.10.2';
+const BUILD_STAMP = '2026-04-26 12:20:40 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1816,6 +1816,7 @@ async function loadReps() {
   if (error) {
     console.warn('[Arbiter] Failed to load reps:', error);
     reps = [];
+    window.reps = reps;
     return;
   }
   reps = (data || []).map(r => ({
@@ -1825,6 +1826,16 @@ async function loadReps() {
     isActive: r.is_active,
     createdAt: r.created_at,
   }));
+  // Mirror to window so test harnesses (and DevTools poking) can observe it.
+  // The script-scope `reps` binding stays the source of truth for the app.
+  window.reps = reps;
+  // If the Reps tab is currently the active tab, re-render so newly loaded
+  // data shows immediately. Without this, a user sitting on the tab during
+  // loadReps would see stale state until they navigated away and back.
+  const repsPanel = document.getElementById('tab-submitters');
+  if (repsPanel && repsPanel.classList.contains('active')) {
+    renderSubmitters();
+  }
 }
 
 async function sbUpsertProject(proj) {
@@ -3113,9 +3124,13 @@ function renderSubmitters() {
     return { ...r, total, avgScore, acceptRate, lastDate, statusCounts, decided: decided.length };
   });
 
-  // Empty state
+  // Empty state — but keep the Add Rep button so the first rep can be added.
   if (!withStats.length) {
-    container.innerHTML = '<div class="empty-state">No reps or submissions yet. Add your first rep or wait for submissions to come in.</div>';
+    container.innerHTML = `
+      <div class="submitter-sort-bar" style="margin-bottom:1rem;">
+        <button class="add-rep-btn" onclick="openAddRepModal()">+ Add rep</button>
+      </div>
+      <div class="empty-state">No reps or submissions yet. Add your first rep above, or wait for submissions to come in.</div>`;
     return;
   }
 

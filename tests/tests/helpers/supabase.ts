@@ -87,3 +87,73 @@ export async function getProjectByName(name: string): Promise<any | null> {
   if (error) throw error;
   return data;
 }
+
+/* ============================================================
+ * REPS HELPERS — added in C.3 to support Reps-tab tests.
+ * ============================================================ */
+
+export type SeedRepInput = {
+  email: string;
+  name: string;
+  isActive?: boolean;
+};
+
+/**
+ * Hard-delete all reps in the test workspace. This is destructive but
+ * the test workspace is disposable. Note: there's a baseline of 3 reps
+ * (Sub1/Sub2/Sub3) seeded by migration 003's backfill — tests that need
+ * a clean slate should call this first, then re-seed only the reps they
+ * actually need.
+ */
+export async function cleanTestReps(): Promise<void> {
+  const workspaceId = process.env.TEST_WORKSPACE_ID;
+  if (!workspaceId) throw new Error('TEST_WORKSPACE_ID must be set in .env.test');
+  const c = await authedClient();
+  const { error } = await c.from('reps').delete().eq('workspace_id', workspaceId);
+  if (error) throw new Error('cleanTestReps failed: ' + error.message);
+}
+
+/**
+ * Insert one or more reps into the test workspace. is_active defaults to
+ * true. Returns the inserted rows so tests can grab IDs if they need them.
+ */
+export async function seedTestReps(reps: SeedRepInput[]): Promise<any[]> {
+  const workspaceId = process.env.TEST_WORKSPACE_ID;
+  if (!workspaceId) throw new Error('TEST_WORKSPACE_ID must be set in .env.test');
+  if (!reps.length) return [];
+  const c = await authedClient();
+  const rows = reps.map(r => ({
+    workspace_id: workspaceId,
+    email: r.email.toLowerCase(),
+    name: r.name,
+    is_active: r.isActive !== false,
+  }));
+  const { data, error } = await c.from('reps').insert(rows).select();
+  if (error) throw new Error('seedTestReps failed: ' + error.message);
+  return data || [];
+}
+
+/** Count reps in the test workspace. */
+export async function countReps(): Promise<number> {
+  const workspaceId = process.env.TEST_WORKSPACE_ID;
+  if (!workspaceId) throw new Error('TEST_WORKSPACE_ID must be set in .env.test');
+  const c = await authedClient();
+  const { count, error } = await c.from('reps')
+    .select('*', { count: 'exact', head: true })
+    .eq('workspace_id', workspaceId);
+  if (error) throw error;
+  return count || 0;
+}
+
+/** Fetch a rep by email from the test workspace. */
+export async function getRepByEmail(email: string): Promise<any | null> {
+  const workspaceId = process.env.TEST_WORKSPACE_ID;
+  const c = await authedClient();
+  const { data, error } = await c.from('reps')
+    .select('*')
+    .eq('workspace_id', workspaceId!)
+    .eq('email', email.toLowerCase())
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}

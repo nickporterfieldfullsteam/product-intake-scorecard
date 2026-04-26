@@ -52,6 +52,26 @@ export async function openSettingsTab(page: Page) {
 }
 
 /**
+ * Navigate to the Reps tab. Internal tab id is still tab-submitters
+ * (renamed display-only in C.3.a); the button id is tab-btn-submitters.
+ *
+ * If expectedRepCount is provided, waits for window.reps to have that many
+ * entries before clicking the tab. This guards against the race where
+ * loadReps() hasn't resolved yet by the time we navigate.
+ */
+export async function openRepsTab(page: Page, expectedRepCount?: number) {
+  if (typeof expectedRepCount === 'number') {
+    await page.waitForFunction(
+      (n) => Array.isArray((window as any).reps) && (window as any).reps.length === n,
+      expectedRepCount,
+      { timeout: 10_000 }
+    );
+  }
+  await page.locator('#tab-btn-submitters').click();
+  await page.locator('#tab-submitters').waitFor({ state: 'visible' });
+}
+
+/**
  * For file:// tests where the app reads credentials from localStorage (Supabase SDK),
  * ensure we start from a clean slate.
  */

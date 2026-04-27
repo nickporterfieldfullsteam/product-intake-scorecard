@@ -1597,8 +1597,8 @@
 </footer>
 
 <script>
-const VERSION = '1.11.0';
-const BUILD_STAMP = '2026-04-26 05:07:02 PM EST';
+const VERSION = '1.11.1';
+const BUILD_STAMP = '2026-04-27 12:04:04 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -6397,7 +6397,15 @@ async function sendMagicLink() {
   successEl.style.display = 'none';
   if (!email) { errEl.textContent = 'Please enter your email address.'; errEl.style.display = 'block'; return; }
   setAuthLoading('magic-btn', true);
-  const { error } = await _sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+  // Explicit redirectTo so the magic link returns the user to THIS exact URL
+  // rather than relying on Supabase's Site URL config (which can drift or be
+  // wrong, as it was when this was first deployed). origin+pathname keeps
+  // any subpath (e.g. /arbiter/) without trailing query/hash junk.
+  const redirectTo = window.location.origin + window.location.pathname;
+  const { error } = await _sb.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: false, emailRedirectTo: redirectTo },
+  });
   setAuthLoading('magic-btn', false);
   if (error) {
     errEl.textContent = error.message;

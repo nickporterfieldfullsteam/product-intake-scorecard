@@ -163,11 +163,17 @@ test.describe('Phase 2 — Supabase persistence', () => {
     // Statuses are project-scoped selects; we change the first one
     const statusSelect = authedPage.locator('#projects-list select').first();
     await statusSelect.waitFor();
+    await statusSelect.selectOption({ label: 'Under Review' });
 
+    // v1.12.0: status changes in the inline panel buffer to a draft;
+    // PATCH only fires when Save is clicked. Find the Save button by
+    // its data-draft-save attribute (matches the project's id).
+    const projectBefore = await getProjectByName('Status Test Project');
+    const saveBtn = authedPage.locator(`button[data-draft-save="${projectBefore!.id}"]`);
     const patchPromise = authedPage.waitForResponse(resp =>
       resp.url().includes('/rest/v1/projects') && resp.request().method() === 'PATCH'
     );
-    await statusSelect.selectOption({ label: 'Under Review' });
+    await saveBtn.click();
     await patchPromise;
 
     // DB: status updated

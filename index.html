@@ -145,6 +145,7 @@
   .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
   button { font-family: inherit; cursor: pointer; font-weight: 400; }
   .btn-primary { background: #1a1a1a; color: #fff; border: 1px solid #1a1a1a; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 400; }
+  .btn-primary:disabled { background: #ccc; border-color: #ccc; color: #fff; cursor: not-allowed; }
   .btn-primary:hover { background: #333; border-color: #333; }
   .btn-secondary { background: transparent; color: #1a1a1a; border: 1px solid #ccc; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 400; }
   .btn-secondary:hover { background: #f5f5f3; }
@@ -1597,8 +1598,8 @@
 </footer>
 
 <script>
-const VERSION = '1.11.1';
-const BUILD_STAMP = '2026-04-27 12:04:04 PM EST';
+const VERSION = '1.12.0';
+const BUILD_STAMP = '2026-04-27 12:31:48 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -2608,23 +2609,23 @@ function openKanbanCard(id) {
       <div class="proj-detail-grid" style="margin-bottom:12px;">
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Status</label>
-          <select style="font-size:13px;" onchange="updateProjectStatus('${p.id}', this.value); this.closest('.modal-overlay').querySelector('.status-badge-modal').textContent=this.value; const sc2=STATUS_CONFIG[this.value]||STATUS_CONFIG['Submitted']; this.closest('.modal-overlay').querySelector('.status-badge-modal').style.background=sc2.bg; this.closest('.modal-overlay').querySelector('.status-badge-modal').style.color=sc2.color; renderKanban();">
+          <select style="font-size:13px;" onchange="draftUpdateStatus('${p.id}', this.value); this.closest('.modal-overlay').querySelector('.status-badge-modal').textContent=this.value; const sc2=STATUS_CONFIG[this.value]||STATUS_CONFIG['Submitted']; this.closest('.modal-overlay').querySelector('.status-badge-modal').style.background=sc2.bg; this.closest('.modal-overlay').querySelector('.status-badge-modal').style.color=sc2.color;">
             ${STATUS_ORDER.map(s => `<option value="${s}" ${status===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Revisit date <span style="font-weight:400;text-transform:none;">(for Deferred)</span></label>
           <div style="display:flex;gap:6px;">
-            <select style="font-size:13px;flex:1.2;" id="km-rd-m-${p.id}" onchange="updateRevisitDate('${p.id}')">${monthOpts}</select>
-            <select style="font-size:13px;flex:1;" id="km-rd-d-${p.id}" onchange="updateRevisitDate('${p.id}')">${dayOpts}</select>
-            <select style="font-size:13px;flex:1.3;" id="km-rd-y-${p.id}" onchange="updateRevisitDate('${p.id}')">${yearOpts}</select>
+            <select style="font-size:13px;flex:1.2;" id="km-rd-m-${p.id}" onchange="draftUpdateRevisitDate('${p.id}','km-rd-')">${monthOpts}</select>
+            <select style="font-size:13px;flex:1;" id="km-rd-d-${p.id}" onchange="draftUpdateRevisitDate('${p.id}','km-rd-')">${dayOpts}</select>
+            <select style="font-size:13px;flex:1.3;" id="km-rd-y-${p.id}" onchange="draftUpdateRevisitDate('${p.id}','km-rd-')">${yearOpts}</select>
           </div>
         </div>
       </div>
 
       <div style="margin-bottom:12px;">
         <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Decision notes</label>
-        <textarea style="font-size:13px;min-height:60px;width:100%;font-family:inherit;padding:8px 10px;border:1px solid #ddd;border-radius:8px;resize:vertical;box-sizing:border-box;" placeholder="Why was this decision made?" onchange="updateProjectField('${p.id}','decisionNotes',this.value)">${p.decisionNotes||''}</textarea>
+        <textarea style="font-size:13px;min-height:60px;width:100%;font-family:inherit;padding:8px 10px;border:1px solid #ddd;border-radius:8px;resize:vertical;box-sizing:border-box;" placeholder="Why was this decision made?" onchange="draftUpdateField('${p.id}','decisionNotes',this.value)">${p.decisionNotes||''}</textarea>
       </div>
 
       ${lockedRows || detailRows ? `
@@ -2639,29 +2640,50 @@ function openKanbanCard(id) {
       </details>` : ''}
 
       <div class="modal-btns">
-        <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
-        <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove(); showDecisionEmailModal('${p.id}')">Send decision email</button>
-        <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove(); editProject('${p.id}')">Edit &amp; re-score</button>
+        <button class="btn-secondary" onclick="closeProjectModal('${p.id}', this.closest('.modal-overlay'))">Cancel</button>
+        <button class="btn-primary" data-draft-save="${p.id}" disabled onclick="saveAndCloseProjectModal('${p.id}', this.closest('.modal-overlay'))">Save</button>
+        <button class="btn-secondary" onclick="autoSaveThen('${p.id}', () => { this.closest('.modal-overlay').remove(); showDecisionEmailModal('${p.id}'); })">Send decision email</button>
+        <button class="btn-secondary" onclick="autoSaveThen('${p.id}', () => { this.closest('.modal-overlay').remove(); editProject('${p.id}'); })">Edit &amp; re-score</button>
       </div>
     </div>`;
 
-  // Wire up updateRevisitDate to use km-rd- prefix IDs
+  // Mount, start draft, wire close paths
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  startDraft(p.id);
+  refreshDraftUI(p.id);
 
-  // Patch revisit date selects for modal (use km-rd- prefix)
-  ['m','d','y'].forEach(part => {
-    const el = document.getElementById(`km-rd-${part}-${p.id}`);
-    if (el) el.onchange = () => {
-      const m2 = (document.getElementById(`km-rd-m-${p.id}`)||{}).value||'';
-      const d2 = (document.getElementById(`km-rd-d-${p.id}`)||{}).value||'';
-      const y2 = (document.getElementById(`km-rd-y-${p.id}`)||{}).value||'';
-      const val = (y2&&m2&&d2) ? y2+'-'+m2+'-'+d2 : '';
-      // debouncedPatchRevisitDate sets p.revisitDate + schedules a single PATCH
-      debouncedPatchRevisitDate(p.id, val);
-      if (val) toast('Revisit date set to ' + (monthNames()[parseInt(m2)-1]) + ' ' + parseInt(d2) + ', ' + y2 + '.');
-    };
+  // Click-outside: confirm-if-dirty before closing
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeProjectModal(p.id, overlay);
   });
+
+  // Escape key: same. Capture once and clean up when modal closes.
+  const escHandler = e => { if (e.key === 'Escape') closeProjectModal(p.id, overlay); };
+  document.addEventListener('keydown', escHandler);
+  // Cleanup on remove — overlay.remove() triggers a MutationObserver-free
+  // cleanup via a one-shot DOMNodeRemoved listener on the parent.
+  overlay._escCleanup = () => document.removeEventListener('keydown', escHandler);
+}
+
+/**
+ * Close-path handler for the Kanban modal. If draft is dirty, confirm
+ * discard. Otherwise close cleanly. Used by Cancel button, Escape,
+ * and click-outside.
+ */
+function closeProjectModal(projectId, overlay) {
+  if (!confirmDiscardIfDirty(projectId)) return;
+  cancelDraft(projectId);
+  if (overlay._escCleanup) overlay._escCleanup();
+  overlay.remove();
+}
+
+/**
+ * Save-and-close handler for the Kanban modal's Save button.
+ */
+async function saveAndCloseProjectModal(projectId, overlay) {
+  await saveDraft(projectId);
+  if (overlay._escCleanup) overlay._escCleanup();
+  overlay.remove();
 }
 
 
@@ -3897,22 +3919,22 @@ function renderProjectList() {
         <div class="proj-detail-grid" style="margin-bottom:12px;">
           <div>
             <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Status</label>
-            <select style="font-size:13px;" onchange="updateProjectStatus('${p.id}', this.value)">
+            <select style="font-size:13px;" onchange="draftUpdateStatus('${p.id}', this.value)">
               ${STATUS_ORDER.map(s => `<option value="${s}" ${status===s?'selected':''}>${s}</option>`).join('')}
             </select>
           </div>
           <div>
             <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Revisit date <span style="font-weight:400;text-transform:none;">(for Deferred)</span></label>
             <div style="display:flex;gap:6px;">
-              <select style="font-size:13px;flex:1.2;" id="rd-m-${p.id}" onchange="updateRevisitDate('${p.id}')">${monthOpts}</select>
-              <select style="font-size:13px;flex:1;" id="rd-d-${p.id}" onchange="updateRevisitDate('${p.id}')">${dayOpts}</select>
-              <select style="font-size:13px;flex:1.3;" id="rd-y-${p.id}" onchange="updateRevisitDate('${p.id}')">${yearOpts}</select>
+              <select style="font-size:13px;flex:1.2;" id="rd-m-${p.id}" onchange="draftUpdateRevisitDate('${p.id}','rd-')">${monthOpts}</select>
+              <select style="font-size:13px;flex:1;" id="rd-d-${p.id}" onchange="draftUpdateRevisitDate('${p.id}','rd-')">${dayOpts}</select>
+              <select style="font-size:13px;flex:1.3;" id="rd-y-${p.id}" onchange="draftUpdateRevisitDate('${p.id}','rd-')">${yearOpts}</select>
             </div>
           </div>
         </div>
         <div style="margin-bottom:12px;">
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Decision notes</label>
-          <textarea style="font-size:13px;min-height:60px;width:100%;font-family:inherit;padding:8px 10px;border:1px solid #ddd;border-radius:8px;resize:vertical;box-sizing:border-box;" placeholder="Why was this decision made? This can be included in the notification email." onchange="updateProjectField('${p.id}','decisionNotes',this.value)">${p.decisionNotes||''}</textarea>
+          <textarea style="font-size:13px;min-height:60px;width:100%;font-family:inherit;padding:8px 10px;border:1px solid #ddd;border-radius:8px;resize:vertical;box-sizing:border-box;" placeholder="Why was this decision made? This can be included in the notification email." onchange="draftUpdateField('${p.id}','decisionNotes',this.value)">${p.decisionNotes||''}</textarea>
         </div>
         ${(lockedRows || detailRows) ? `
         <details style="margin-bottom:12px;">
@@ -3925,8 +3947,10 @@ function renderProjectList() {
           <div style="margin-top:4px;">${criteriaRows}</div>
         </details>` : ''}
         <div class="btn-row">
-          <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="showDecisionEmailModal('${p.id}')">Send decision email</button>
-          <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="editProject('${p.id}')">Edit &amp; re-score</button>
+          <button class="btn-primary" style="font-size:12px;padding:6px 14px;" data-draft-save="${p.id}" disabled onclick="saveDraft('${p.id}')">Save</button>
+          <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="autoSaveThen('${p.id}', () => showDecisionEmailModal('${p.id}'))">Send decision email</button>
+          <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="autoSaveThen('${p.id}', () => editProject('${p.id}'))">Edit &amp; re-score</button>
+          <span style="flex:1;"></span>
           <button class="btn-danger-inline" style="font-size:12px;" data-delete-id="${p.id}" onclick="deleteProject('${p.id}')">Delete project</button>
         </div>
       </div>`;
@@ -3938,8 +3962,172 @@ function toggleProjectDetail(id) {
   const panel = document.getElementById('proj-detail-' + id);
   const chev = document.getElementById('proj-chev-' + id);
   if (!panel) return;
-  const open = panel.classList.toggle('open');
-  if (chev) chev.style.transform = open ? 'rotate(180deg)' : '';
+  const isOpen = panel.classList.contains('open');
+  if (isOpen) {
+    // Closing — block if dirty unless user confirms discard
+    if (!confirmDiscardIfDirty(id)) return;
+    cancelDraft(id);
+    panel.classList.remove('open');
+    if (chev) chev.style.transform = '';
+  } else {
+    startDraft(id);
+    panel.classList.add('open');
+    if (chev) chev.style.transform = 'rotate(180deg)';
+    refreshDraftUI(id);
+  }
+}
+
+/**
+ * For "Send decision email" / "Edit & re-score" buttons: if there are
+ * unsaved decision changes, save them first, then run the follow-up
+ * action. Saving is awaited so the email modal sees fresh state.
+ */
+async function autoSaveThen(projectId, fn) {
+  if (isDraftDirty(projectId)) {
+    await saveDraft(projectId);
+  } else {
+    cancelDraft(projectId);
+  }
+  fn();
+}
+
+/* ── PROJECT DRAFT STATE (Save refactor) ──
+ *
+ * Decision panels (inline list panel + Kanban modal) used to auto-save
+ * every field change. This was bursty and made notifications impossible
+ * without spamming the rep. The Save model: when a panel/modal opens we
+ * snapshot the current state into `baseline`, edits mutate `draft`,
+ * Save persists the diff, Cancel discards.
+ *
+ * Auto-save still applies for:
+ *   - Kanban drag-drop status changes (single atomic action)
+ *   - Any place updateProjectStatus / updateProjectField / updateRevisitDate
+ *     is called directly outside a draft surface
+ *
+ * Draft fields tracked: status, decisionNotes, revisitDate.
+ */
+const projectDrafts = new Map(); // projectId -> {baseline, draft}
+
+function startDraft(projectId) {
+  const p = projects.find(x => x.id == projectId);
+  if (!p) return;
+  // Existing draft? Don't reset — user might have re-opened from a different
+  // surface (list panel + kanban modal could both target the same project).
+  if (projectDrafts.has(projectId)) return;
+  const baseline = {
+    status: p.status || 'Submitted',
+    decisionNotes: p.decisionNotes || '',
+    revisitDate: p.revisitDate || '',
+  };
+  projectDrafts.set(projectId, { baseline, draft: { ...baseline } });
+}
+
+function getDraft(projectId) {
+  return projectDrafts.get(projectId);
+}
+
+function isDraftDirty(projectId) {
+  const d = projectDrafts.get(projectId);
+  if (!d) return false;
+  return d.baseline.status !== d.draft.status
+    || d.baseline.decisionNotes !== d.draft.decisionNotes
+    || d.baseline.revisitDate !== d.draft.revisitDate;
+}
+
+function draftUpdateStatus(projectId, value) {
+  const d = projectDrafts.get(projectId);
+  if (!d) return;
+  d.draft.status = value;
+  refreshDraftUI(projectId);
+}
+
+function draftUpdateField(projectId, field, value) {
+  const d = projectDrafts.get(projectId);
+  if (!d) return;
+  d.draft[field] = value;
+  refreshDraftUI(projectId);
+}
+
+function draftUpdateRevisitDate(projectId, prefix) {
+  const d = projectDrafts.get(projectId);
+  if (!d) return;
+  const m = (document.getElementById(prefix + 'm-' + projectId) || {}).value || '';
+  const day = (document.getElementById(prefix + 'd-' + projectId) || {}).value || '';
+  const y = (document.getElementById(prefix + 'y-' + projectId) || {}).value || '';
+  d.draft.revisitDate = (y && m && day) ? y + '-' + m + '-' + day : '';
+  refreshDraftUI(projectId);
+}
+
+/**
+ * Update Save-button enabled state for ALL surfaces of a project (inline
+ * panel + kanban modal could both be open). Surfaces that don't exist are
+ * silently skipped.
+ */
+function refreshDraftUI(projectId) {
+  const dirty = isDraftDirty(projectId);
+  document.querySelectorAll(`[data-draft-save="${projectId}"]`).forEach(btn => {
+    btn.disabled = !dirty;
+  });
+}
+
+/**
+ * Persist the draft. Returns the list of changed fields for the caller
+ * (useful later when wiring notifications).
+ */
+async function saveDraft(projectId) {
+  const d = projectDrafts.get(projectId);
+  if (!d) return [];
+  const p = projects.find(x => x.id == projectId);
+  if (!p) return [];
+
+  const changed = [];
+  if (d.baseline.status !== d.draft.status) {
+    p.status = d.draft.status;
+    sbUpdateProjectField(projectId, 'status', d.draft.status);
+    changed.push('status');
+  }
+  if (d.baseline.decisionNotes !== d.draft.decisionNotes) {
+    p.decisionNotes = d.draft.decisionNotes;
+    sbUpdateProjectField(projectId, 'decision_notes', d.draft.decisionNotes);
+    changed.push('decisionNotes');
+  }
+  if (d.baseline.revisitDate !== d.draft.revisitDate) {
+    p.revisitDate = d.draft.revisitDate;
+    sbUpdateProjectField(projectId, 'revisit_date', d.draft.revisitDate || null);
+    changed.push('revisitDate');
+  }
+
+  // Clear the draft now that it's persisted
+  projectDrafts.delete(projectId);
+
+  // UI refresh — same paths that the legacy update functions touched
+  if (changed.length) {
+    const badge = document.getElementById('proj-status-badge-' + projectId);
+    if (badge && changed.includes('status')) {
+      const sc = STATUS_CONFIG[p.status] || STATUS_CONFIG['Submitted'];
+      badge.textContent = p.status;
+      badge.style.background = sc.bg;
+      badge.style.color = sc.color;
+    }
+    buildStatusFilterBar();
+    renderSummaryMetrics();
+    renderKanban();
+    toast(changed.length === 1 ? 'Saved.' : 'Saved ' + changed.length + ' changes.');
+  }
+  return changed;
+}
+
+function cancelDraft(projectId) {
+  projectDrafts.delete(projectId);
+}
+
+/**
+ * Confirms with the user if dirty. Returns true if it's safe to close
+ * (either nothing dirty, or user confirmed discard).
+ */
+function confirmDiscardIfDirty(projectId) {
+  if (!isDraftDirty(projectId)) return true;
+  return confirm('You have unsaved changes. Discard them?');
 }
 
 function updateProjectStatus(id, status) {

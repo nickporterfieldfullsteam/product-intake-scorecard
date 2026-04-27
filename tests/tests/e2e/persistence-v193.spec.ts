@@ -95,20 +95,19 @@ test.describe('v1.9.3 persistence fixes', () => {
     await authedPage.locator(`.kanban-card[data-id="${projectId}"]`).click();
 
     // Set revisit date to 2027-06-15 via the three selects in the modal.
-    // The modal's date selects have IDs km-rd-m/d/y-<id>, and their option
-    // values are '01'..'12' for months, '01'..'31' for days, and the year
-    // as a 4-digit string. The onchange handler is patched by the modal
-    // opener to read from km-rd-* IDs (not rd-*), which is what writes to DB.
+    // The modal's date selects have IDs km-rd-m/d/y-<id>; onchange now buffers
+    // to a draft via draftUpdateRevisitDate() — nothing persists until Save.
     await authedPage.locator(`#km-rd-m-${projectId}`).selectOption('06');
     await authedPage.locator(`#km-rd-d-${projectId}`).selectOption('15');
     await authedPage.locator(`#km-rd-y-${projectId}`).selectOption('2027');
 
-    // Revisit-date writes are now debounced (250ms after the last select
-    // change) to coalesce rapid multi-select edits into a single PATCH.
-    // Wait long enough for: debounce window (250ms) + async PATCH RTT +
-    // comfortable margin. Reloading before the PATCH completes would
-    // cancel the pending timer and lose the write.
-    await authedPage.waitForTimeout(1000);
+    // Click Save to persist the draft. There are two Save buttons in the DOM
+    // with this projectId (the inline panel's and the modal's), so scope the
+    // selector to the modal overlay specifically.
+    await authedPage.locator(`.modal-overlay button[data-draft-save="${projectId}"]`).click();
+
+    // Allow the async sbUpdateProjectField() call time to complete
+    await authedPage.waitForTimeout(500);
 
     // Reload and check DB directly
     await authedPage.reload();

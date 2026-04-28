@@ -1394,7 +1394,7 @@
               </label>
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
                 <input type="checkbox" id="qa-7-3" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
-                Version v1.9.7 visible in footer
+                Current version visible in footer
               </label>
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
                 <input type="checkbox" id="qa-7-4" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
@@ -1598,8 +1598,8 @@
 </footer>
 
 <script>
-const VERSION = '1.12.0';
-const BUILD_STAMP = '2026-04-27 12:31:48 PM EST';
+const VERSION = '1.12.1';
+const BUILD_STAMP = '2026-04-27 07:58:40 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -6321,9 +6321,9 @@ function runAutoQA() {
 
   // ── Tour & general (qa-7-x)
   check('qa-7-0', 'startTour function exists', () => typeof startTour === 'function');
-  check('qa-7-3', 'Footer shows v1.9.7 and build', () => {
+  check('qa-7-3', 'Footer shows current version and build', () => {
     const fb = document.getElementById('footer-build');
-    return fb && fb.textContent.includes('1.9.7') && fb.textContent.includes('Build');
+    return fb && fb.textContent.includes(VERSION) && fb.textContent.includes('Build');
   });
   check('qa-7-5', 'No critical globals missing', () => {
     return typeof projects !== 'undefined' &&

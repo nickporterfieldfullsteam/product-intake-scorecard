@@ -53,6 +53,17 @@ export async function openEditorTab(page: Page) {
 }
 
 /**
+ * Navigate to the Scoring Weights tab (presets, weight sliders, tier thresholds).
+ * Same pattern as openEditorTab.
+ */
+export async function openWeightsTab(page: Page) {
+  await page.locator('#btn-config').click();
+  await page.locator('#config-drawer').waitFor({ state: 'visible' });
+  await page.locator('#config-drawer').getByRole('button', { name: /scoring weights/i }).click();
+  await page.locator('#tab-weights').waitFor({ state: 'visible' });
+}
+
+/**
  * Navigate to the Settings tab (where sign-out, sample data, backups live).
  * Flow: click gear → drawer opens → click "Settings" → drawer closes, #tab-settings becomes active.
  */

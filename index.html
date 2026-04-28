@@ -616,6 +616,27 @@
   <div id="tab-settings" class="tab-panel">
 
     <div class="section">
+      <div class="section-title">Workspace members</div>
+      <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Admins and PMs who can manage this workspace. Both roles have the same permissions today; the label is for your own organization.</p>
+      <div id="wm-list" style="margin-bottom:1.25rem;">
+        <p style="font-size:13px;color:#888;font-style:italic;">Loading…</p>
+      </div>
+      <div style="border-top:1px solid #f0f0ee;padding-top:1rem;">
+        <p style="font-size:12px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Add a member</p>
+        <p style="font-size:12px;color:#888;margin-bottom:10px;">The user must already have a confirmed account.</p>
+        <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+          <input type="email" id="wm-add-email" placeholder="user@example.com" style="flex:1;min-width:220px;font-size:13px;padding:7px 10px;">
+          <select id="wm-add-role" style="font-size:13px;padding:7px 10px;">
+            <option value="pm">PM</option>
+            <option value="admin">Admin</option>
+          </select>
+          <button class="btn-primary" style="font-size:13px;padding:7px 14px;" onclick="addWorkspaceMember()">Add member</button>
+        </div>
+        <p id="wm-add-error" style="font-size:12px;color:#a32d2d;margin-top:8px;display:none;"></p>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title">EmailJS configuration</div>
       <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">These credentials are used to send email notifications when the exported sales form is submitted. <a href="https://www.emailjs.com" target="_blank" style="color:#185FA5;">Get your credentials at emailjs.com</a>.</p>
       <div id="emailjs-settings-form"></div>
@@ -1598,8 +1619,8 @@
 </footer>
 
 <script>
-const VERSION = '1.12.1';
-const BUILD_STAMP = '2026-04-27 07:58:40 PM EST';
+const VERSION = '1.13.0';
+const BUILD_STAMP = '2026-04-28 04:04:31 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1837,6 +1858,204 @@ async function loadReps() {
   if (repsPanel && repsPanel.classList.contains('active')) {
     renderSubmitters();
   }
+}
+
+/* ── WORKSPACE MEMBERS ──
+ *
+ * Admin/PM management for the current workspace. Both roles are
+ * functionally identical today; the role label is for organizational
+ * clarity only.
+ *
+ * Self-protection: an admin cannot demote or remove themselves.
+ * Enforced both in the UI (disabled controls) and at the policy layer
+ * (USING (... AND user_id != auth.uid())). The strict policy means
+ * you must ask another admin to demote/remove you in a multi-admin
+ * workspace.
+ *
+ * Loading: two parallel queries joined by user_id —
+ *   - workspace_members (id, user_id, role, joined_at) via SELECT
+ *   - list_workspace_member_emails RPC for (user_id → email)
+ * Adding a member: find_user_id_by_email RPC, then INSERT.
+ */
+let workspaceMembers = [];
+let pendingMemberRemoval = null; // member id awaiting confirmation
+
+async function loadWorkspaceMembers() {
+  if (!currentWorkspaceId) return;
+  // Run both queries in parallel — they're independent
+  const [memRes, emailRes] = await Promise.all([
+    _sb.from('workspace_members')
+      .select('id, user_id, role, joined_at')
+      .eq('workspace_id', currentWorkspaceId)
+      .order('joined_at', { ascending: true }),
+    _sb.rpc('list_workspace_member_emails', { p_workspace_id: currentWorkspaceId }),
+  ]);
+  if (memRes.error) {
+    console.warn('[Arbiter] Failed to load workspace_members:', memRes.error);
+    workspaceMembers = [];
+    renderWorkspaceMembers();
+    return;
+  }
+  if (emailRes.error) {
+    console.warn('[Arbiter] Failed to load member emails:', emailRes.error);
+    // Continue without emails — show '(unknown email)' rather than failing entirely
+  }
+  // Merge: build a user_id → email map, then attach to each member row
+  const emailMap = new Map();
+  (emailRes.data || []).forEach(row => emailMap.set(row.user_id, row.email));
+  workspaceMembers = (memRes.data || []).map(m => ({
+    id: m.id,
+    userId: m.user_id,
+    role: m.role,
+    joinedAt: m.joined_at,
+    email: emailMap.get(m.user_id) || '(unknown email)',
+  }));
+  renderWorkspaceMembers();
+}
+
+function renderWorkspaceMembers() {
+  const container = document.getElementById('wm-list');
+  if (!container) return;
+  if (!workspaceMembers.length) {
+    container.innerHTML = '<p style="font-size:13px;color:#888;font-style:italic;">No members yet — add one below.</p>';
+    return;
+  }
+  const myUserId = currentUser?.id;
+  container.innerHTML = workspaceMembers.map(m => {
+    const isSelf = m.userId === myUserId;
+    const isPendingRemoval = pendingMemberRemoval === m.id;
+    const joinedRel = formatRelativeDate(m.joinedAt);
+    return `
+      <div class="wm-row" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #f0f0ee;border-radius:8px;margin-bottom:6px;background:#fff;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${escapeHtml(m.email)}${isSelf ? ' <span style="font-size:11px;color:#888;font-weight:400;">(you)</span>' : ''}
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:2px;">Joined ${joinedRel}</div>
+        </div>
+        <select
+          style="font-size:13px;padding:5px 8px;width:88px;${isSelf ? 'opacity:0.5;cursor:not-allowed;' : ''}"
+          ${isSelf ? 'disabled title="Cannot modify yourself — another admin must do it"' : ''}
+          onchange="updateMemberRole('${m.id}', this.value)">
+          <option value="pm" ${m.role === 'pm' ? 'selected' : ''}>PM</option>
+          <option value="admin" ${m.role === 'admin' ? 'selected' : ''}>Admin</option>
+        </select>
+        ${isPendingRemoval
+          ? `<button class="btn-danger-inline" style="font-size:12px;" onclick="confirmRemoveMember('${m.id}')">Confirm</button>
+             <button class="btn-secondary" style="font-size:12px;padding:5px 10px;" onclick="cancelRemoveMember()">Cancel</button>`
+          : `<button class="btn-danger-inline" style="font-size:12px;${isSelf ? 'opacity:0.4;cursor:not-allowed;' : ''}"
+                ${isSelf ? 'disabled title="Cannot modify yourself"' : ''}
+                onclick="requestRemoveMember('${m.id}')">Remove</button>`
+        }
+      </div>`;
+  }).join('');
+}
+
+/** Format a date as a relative string ("3 days ago", "yesterday", etc). */
+function formatRelativeDate(iso) {
+  if (!iso) return 'unknown';
+  const then = new Date(iso);
+  const now = new Date();
+  const diffMs = now - then;
+  const days = Math.floor(diffMs / (24*60*60*1000));
+  if (days < 1) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return days + ' days ago';
+  if (days < 30) return Math.floor(days / 7) + ' weeks ago';
+  if (days < 365) return Math.floor(days / 30) + ' months ago';
+  return Math.floor(days / 365) + ' years ago';
+}
+
+/** Minimal HTML escape for inserting user-controlled strings into innerHTML. */
+function escapeHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function addWorkspaceMember() {
+  const emailInput = document.getElementById('wm-add-email');
+  const roleSelect = document.getElementById('wm-add-role');
+  const errorEl = document.getElementById('wm-add-error');
+  const email = (emailInput.value || '').trim().toLowerCase();
+  const role = roleSelect.value;
+  errorEl.style.display = 'none';
+  errorEl.textContent = '';
+  // Basic email format check
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errorEl.textContent = 'Please enter a valid email address.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  // Look up the auth user
+  const { data: userId, error: lookupErr } = await _sb.rpc('find_user_id_by_email', { p_email: email });
+  if (lookupErr) {
+    errorEl.textContent = 'Failed to look up user: ' + lookupErr.message;
+    errorEl.style.display = 'block';
+    return;
+  }
+  if (!userId) {
+    errorEl.textContent = 'No account exists with that email. Ask them to sign up first.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  // Check they're not already a member (avoids a unique-constraint error)
+  if (workspaceMembers.some(m => m.userId === userId)) {
+    errorEl.textContent = 'That user is already a member of this workspace.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  // Insert
+  const { error: insErr } = await _sb.from('workspace_members').insert({
+    workspace_id: currentWorkspaceId,
+    user_id: userId,
+    role: role,
+  });
+  if (insErr) {
+    errorEl.textContent = 'Failed to add member: ' + insErr.message;
+    errorEl.style.display = 'block';
+    return;
+  }
+  emailInput.value = '';
+  roleSelect.value = 'pm';
+  toast('Member added.');
+  await loadWorkspaceMembers();
+}
+
+async function updateMemberRole(memberId, newRole) {
+  const { error } = await _sb.from('workspace_members')
+    .update({ role: newRole })
+    .eq('id', memberId);
+  if (error) {
+    toast('Failed to update role: ' + error.message);
+    // Reload to revert any optimistic UI state
+    await loadWorkspaceMembers();
+    return;
+  }
+  toast('Role updated.');
+  await loadWorkspaceMembers();
+}
+
+function requestRemoveMember(memberId) {
+  pendingMemberRemoval = memberId;
+  renderWorkspaceMembers();
+}
+
+function cancelRemoveMember() {
+  pendingMemberRemoval = null;
+  renderWorkspaceMembers();
+}
+
+async function confirmRemoveMember(memberId) {
+  pendingMemberRemoval = null;
+  const { error } = await _sb.from('workspace_members')
+    .delete()
+    .eq('id', memberId);
+  if (error) {
+    toast('Failed to remove member: ' + error.message);
+    await loadWorkspaceMembers();
+    return;
+  }
+  toast('Member removed.');
+  await loadWorkspaceMembers();
 }
 
 async function sbUpsertProject(proj) {
@@ -6476,6 +6695,7 @@ function showTab(tab) {
     buildSettingsEmailJS();
     const emailEl = document.getElementById('settings-user-email');
     if (emailEl) emailEl.textContent = currentUser?.email || '';
+    loadWorkspaceMembers();
   }
 }
 
@@ -6737,6 +6957,7 @@ function showConfigTab(tab) {
       buildSettingsEmailJS();
       const emailEl = document.getElementById('settings-user-email');
       if (emailEl) emailEl.textContent = currentUser?.email || '';
+      loadWorkspaceMembers();
     }
   }
   // Show a back button

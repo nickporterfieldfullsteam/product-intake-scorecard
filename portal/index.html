@@ -309,7 +309,7 @@
  * Raw-fetch architecture unchanged from v0.3.0+: no Supabase JS client.
  * ============================================================ */
 
-const VERSION = '0.5.0';
+const VERSION = '0.6.0';
 const BUILD_STAMP = '2026-04-26 05:20:33 PM EST';
 
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
@@ -545,6 +545,27 @@ async function sbUpdate(table, filter, patch) {
   }
   const rows = await resp.json();
   return rows?.[0] || null;
+}
+
+/**
+ * Fire a transactional email notification via the notify Edge Function.
+ * Always fire-and-forget at the call site — do not await user-visible flow.
+ */
+async function notifyEvent(eventType, projectId, extra = {}) {
+  if (!currentSession?.access_token) return;
+  const resp = await fetch(SUPABASE_URL + '/functions/v1/notify', {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: 'Bearer ' + currentSession.access_token,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ event_type: eventType, project_id: projectId, ...extra }),
+  });
+  if (!resp.ok) {
+    throw new Error('notify failed: ' + resp.status + ' ' + await resp.text());
+  }
+  return resp.json();
 }
 
 /* ============================================================
@@ -1089,6 +1110,12 @@ async function submitForm() {
       };
       const saved = await sbInsert('projects', row);
       if (!saved) throw new Error('Insert returned no row');
+      // Fire-and-forget: notify all workspace members of the new submission.
+      // We don't await this — the user's submit shouldn't block on email
+      // delivery, and an email failure shouldn't fail the submit.
+      notifyEvent('new_submission', saved.id).catch(err => {
+        console.warn('[Portal] notify failed (non-blocking):', err);
+      });
       toast('Request submitted!');
       showDashboardView();
       await renderSubmissionsList();

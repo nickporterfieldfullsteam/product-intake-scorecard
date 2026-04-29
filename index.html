@@ -1619,8 +1619,8 @@
 </footer>
 
 <script>
-const VERSION = '1.13.0';
-const BUILD_STAMP = '2026-04-28 04:04:31 PM EST';
+const VERSION = '1.14.0';
+const BUILD_STAMP = '2026-04-28 11:26:13 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1966,11 +1966,6 @@ function formatRelativeDate(iso) {
   return Math.floor(days / 365) + ' years ago';
 }
 
-/** Minimal HTML escape for inserting user-controlled strings into innerHTML. */
-function escapeHtml(s) {
-  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
 async function addWorkspaceMember() {
   const emailInput = document.getElementById('wm-add-email');
   const roleSelect = document.getElementById('wm-add-role');
@@ -2124,6 +2119,33 @@ async function sbDeleteProject(id) {
 async function sbUpdateProjectField(id, dbField, value) {
   if (!currentWorkspaceId) return;
   await _sb.from('projects').update({ [dbField]: value }).eq('id', id);
+}
+
+/**
+ * Fire a transactional email notification via the notify Edge Function.
+ * Always fire-and-forget at the call site.
+ *
+ * Used by saveDraft to notify reps of project_updated. The portal also
+ * has its own copy for new_submission. Both call sites must use the
+ * current user's session token, which Supabase handles for us via the
+ * authed _sb client (it stores the access token internally).
+ */
+async function notifyEvent(eventType, projectId, extra = {}) {
+  const sess = (await _sb.auth.getSession()).data.session;
+  if (!sess?.access_token) return;
+  const resp = await fetch(SUPABASE_URL + '/functions/v1/notify', {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: 'Bearer ' + sess.access_token,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ event_type: eventType, project_id: projectId, ...extra }),
+  });
+  if (!resp.ok) {
+    throw new Error('notify failed: ' + resp.status + ' ' + await resp.text());
+  }
+  return resp.json();
 }
 
 /**
@@ -4332,6 +4354,20 @@ async function saveDraft(projectId) {
     renderSummaryMetrics();
     renderKanban();
     toast(changed.length === 1 ? 'Saved.' : 'Saved ' + changed.length + ' changes.');
+    // Fire project_updated notification to the rep, but skip if the rep is
+    // also the current user (don't email yourself about your own change).
+    // Fire-and-forget — UI shouldn't wait on email delivery.
+    //
+    // Note: the in-memory project shape doesn't carry submitter_email at
+    // the top level (loadProjects doesn't copy it). Use lockedVals.__email__
+    // which is the same value originally stored at submission time.
+    const repEmail = (p.lockedVals?.__email__ || '').toLowerCase();
+    const myEmail = (currentUser?.email || '').toLowerCase();
+    if (repEmail && repEmail !== myEmail) {
+      notifyEvent('project_updated', projectId, { changes: changed }).catch(err => {
+        console.warn('[Arbiter] notify failed (non-blocking):', err);
+      });
+    }
   }
   return changed;
 }

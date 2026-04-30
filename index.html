@@ -701,30 +701,12 @@
 
         <div class="help-topic">
           <div class="help-topic-header" onclick="toggleHelp(this)">
-            <span class="help-topic-title">What is this tool?</span>
+            <span class="help-topic-title">What is Arbiter?</span>
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">Arbiter gives your team a consistent, repeatable way to evaluate and prioritize incoming feature and project requests.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">Score every request against the same weighted criteria — no more gut-feel decisions</li>
-            <li style="margin-bottom:4px;">Track what came in, what was accepted, and what was passed on</li>
-            <li style="margin-bottom:4px;">Communicate decisions back to submitters with a built-in email workflow</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="help-topic">
-          <div class="help-topic-header" onclick="toggleHelp(this)">
-            <span class="help-topic-title">New request tab</span>
-            <span class="help-topic-chevron">▾</span>
-          </div>
-          <div class="help-topic-body">
-            <p style="margin:0 0 8px;">Use this tab to score a request yourself — e.g. when a rep walks you through something verbally.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">Select a project type first — this controls which criteria appear and which weight preset is applied</li>
-            <li style="margin-bottom:4px;">Four fields are always required: <strong>Project / feature name</strong>, <strong>Customer / prospect</strong>, <strong>Submitted by</strong>, and <strong>Submitter email</strong></li>
-            <li style="margin-bottom:4px;">Fill in any additional detail fields and answer each criterion</li>
-            <li style="margin-bottom:4px;">Save to add the project to the tracker with a full score and tier</li>
-            </ul>
+            <p style="margin:0 0 8px;">Arbiter is a scorecard for incoming feature and project requests. Reps submit through the rep portal; you and other PMs score, decide, and the rep gets notified.</p>
+            <p style="margin:0;">Every request is evaluated against the same weighted criteria — revenue potential, strategic alignment, effort, and so on — producing a 0–100 score and a tier (pursue, evaluate, defer, pass). The decision is yours; the score gives the conversation a shared starting point.</p>
           </div>
         </div>
 
@@ -734,14 +716,9 @@
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">A running list of every scored request. Filterable by status, project type, tier, date range, and rep.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">Click any row to expand it — view full submission details, per-criterion scores, and decision controls</li>
-            <li style="margin-bottom:4px;">Update status, set a revisit date, and add decision notes — all save instantly</li>
-            <li style="margin-bottom:4px;">Send a decision email directly from the panel with a live preview</li>
-            <li style="margin-bottom:4px;">Use <strong>Edit &amp; re-score</strong> to pre-fill the intake form and update the project in place — a score trend indicator (↑↓) shows if the score improved or declined</li>
-            <li style="margin-bottom:4px;">Switch to <strong>Board view</strong> for a kanban layout with drag-and-drop status changes</li>
-            <li style="margin-bottom:4px;">Export as CSV or import a submission using the import code from an email</li>
-            </ul>
+            <p style="margin:0 0 8px;">Your home base. Every saved project lives here in either List or Board view. The summary cards at the top — Total, This month, Avg score, Acceptance rate, Overdue revisits — give you a quick read on the pipeline.</p>
+            <p style="margin:0 0 8px;">Filter by status chip, type, tier, date, or rep. Search by project or customer name. Click a project to expand its details inline; from there you can change status, add decision notes, or set a revisit date.</p>
+            <p style="margin:0;">Switch to <strong>Board</strong> to see projects laid out as a kanban grouped by status. Drag a card to a new column to change its status — the change persists.</p>
           </div>
         </div>
 
@@ -751,29 +728,68 @@
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">Every project moves through: <strong>Submitted → Under Review → Accepted → Completed / Deferred / Passed</strong>.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">Change status from the expanded row or by dragging cards on the board — updates instantly</li>
-            <li style="margin-bottom:4px;">Once accepted and shipped to Jira, mark as <strong>Completed</strong> to close the loop — Completed counts toward decided metrics and appears in the Insights charts</li>
-            <li style="margin-bottom:4px;">For deferred projects, set a revisit date; the Summary metrics card turns red/amber when overdue or due within 7 days — click it to jump straight to those projects</li>
-            <li style="margin-bottom:4px;">Click <strong>Send decision email</strong> to open a modal with a live preview — adjust decision, notes, and revisit date before sending</li>
-            <li style="margin-bottom:4px;">Use <strong>Edit &amp; re-score</strong> to update an existing project without losing its status or decision history</li>
-            </ul>
+            <p style="margin:0 0 8px;">A request moves through statuses as the team works it: <strong>Submitted</strong> → <strong>Under Review</strong> → <strong>Accepted</strong>, <strong>Deferred</strong>, or <strong>Passed</strong>. <strong>Completed</strong> is the terminal state for accepted projects that have shipped.</p>
+            <p style="margin:0 0 8px;">When you change a project's status — or add decision notes, or set a revisit date — and click <strong>Save</strong>, Arbiter automatically emails the original submitter. They see the new status, your notes, and any revisit date. They never see the score or tier (those are internal).</p>
+            <p style="margin:0;"><strong>Deferred</strong> projects benefit from a revisit date. The Dashboard's <strong>Overdue revisits</strong> card surfaces ones whose date has passed, so nothing slips out of mind.</p>
           </div>
         </div>
 
         <div class="help-topic">
           <div class="help-topic-header" onclick="toggleHelp(this)">
-            <span class="help-topic-title">Scoring weights tab</span>
+            <span class="help-topic-title">New request tab</span>
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">Control how much each criterion counts toward the final score.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">Use weight sliders to adjust the relative importance of each criterion</li>
-            <li style="margin-bottom:4px;">Apply a preset to instantly shift the weighting profile (e.g. revenue-focused vs. strategic fit)</li>
-            <li style="margin-bottom:4px;">Save your own custom presets for reuse</li>
-            <li style="margin-bottom:4px;">Map a preset to each project type — weights shift automatically when a type is selected</li>
-            <li style="margin-bottom:4px;">Control which criteria are visible per project type, hiding irrelevant questions entirely</li>
-            </ul>
+            <p style="margin:0 0 8px;">For times when you need to score a request yourself rather than wait for a rep to submit. Open the <strong>+</strong> button in the bottom-right of the Dashboard.</p>
+            <p style="margin:0;">Pick a project type, fill in the locked fields (project name, customer, submitter, etc.) and any custom detail fields, then answer each scoring criterion. The score and tier update live as you answer. Click <strong>Save</strong> to add it to the Dashboard.</p>
+          </div>
+        </div>
+
+        <div class="help-topic">
+          <div class="help-topic-header" onclick="toggleHelp(this)">
+            <span class="help-topic-title">Notifications</span>
+            <span class="help-topic-chevron">▾</span>
+          </div>
+          <div class="help-topic-body">
+            <p style="margin:0 0 8px;">Arbiter sends transactional emails for two events: <strong>new submissions</strong> (sent to all workspace members) and <strong>project updates</strong> (sent to the rep when status, decision notes, or revisit date change).</p>
+            <p style="margin:0 0 8px;">In <strong>Settings → Workspace members</strong>, each member has an <em>Email me on new submissions</em> checkbox on their own row. Uncheck it to opt out of those notifications. Project updates always go to the rep — they're decisions the rep needs to know about.</p>
+            <p style="margin:0;"><strong>Settings → Recent notifications</strong> shows the last 50 send attempts with status pills (Sent, Failed, Skipped). Hover a Failed pill to see the error.</p>
+          </div>
+        </div>
+
+        <div class="help-topic">
+          <div class="help-topic-header" onclick="toggleHelp(this)">
+            <span class="help-topic-title">Workspace members</span>
+            <span class="help-topic-chevron">▾</span>
+          </div>
+          <div class="help-topic-body">
+            <p style="margin:0 0 8px;">Admins and PMs who have access to this workspace. Manage them in <strong>Settings → Workspace members</strong>.</p>
+            <p style="margin:0 0 8px;">To add someone, enter their email and choose a role. The user must already have a confirmed Arbiter account — you'll see an inline error if they don't. Remove a member by clicking <strong>Remove</strong>; you can't remove or demote yourself (another admin has to do that for you).</p>
+            <p style="margin:0;">Today admin and PM roles have the same permissions. The labels are for your own organization.</p>
+          </div>
+        </div>
+
+        <div class="help-topic">
+          <div class="help-topic-header" onclick="toggleHelp(this)">
+            <span class="help-topic-title">Reps tab</span>
+            <span class="help-topic-chevron">▾</span>
+          </div>
+          <div class="help-topic-body">
+            <p style="margin:0 0 8px;">The list of authorized submitters for this workspace. Reps are people who can sign into the rep portal and submit requests; they can't see scoring, decisions, or anyone else's projects.</p>
+            <p style="margin:0 0 8px;">Add a rep with their name and email. Use <strong>Copy portal link</strong> on a rep's card to generate a per-rep URL that pre-fills their email at sign-in. Use <strong>Deactivate</strong> to revoke access without losing their submission history.</p>
+            <p style="margin:0;">The filter chips group reps by status, and clicking a rep card filters the Dashboard to just their projects.</p>
+          </div>
+        </div>
+
+        <div class="help-topic">
+          <div class="help-topic-header" onclick="toggleHelp(this)">
+            <span class="help-topic-title">The rep portal</span>
+            <span class="help-topic-chevron">▾</span>
+          </div>
+          <div class="help-topic-body">
+            <p style="margin:0 0 8px;">Reps sign in at <strong>/arbiter/portal/</strong> with a magic link. They see only their own submissions, can submit new requests, and edit a submission while it's still in <strong>Submitted</strong> status.</p>
+            <p style="margin:0 0 8px;">Reps never see scores, tiers, weights, or other reps' projects. Their dashboard shows status, decision notes, and revisit dates — the same things they get in their notification emails.</p>
+            <p style="margin:0;">If you want to preview what a rep sees, sign out of the main app, open the portal URL, and sign in as a rep account.</p>
           </div>
         </div>
 
@@ -783,45 +799,21 @@
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">Customize the questions, answer options, and detail fields that appear on the intake form.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">Add, remove, reorder, and rename scoring criteria and their answer options</li>
-            <li style="margin-bottom:4px;">Customize the project detail fields — add dropdowns, text fields, or long-form inputs</li>
-            <li style="margin-bottom:4px;">Use the <strong>Hint</strong> field on each criterion for in-context guidance shown below the question</li>
-            <li style="margin-bottom:4px;">Once set up, use the Scoring weights tab to control which criteria appear per project type</li>
-            </ul>
+            <p style="margin:0 0 8px;">Define the questions reps see when submitting and the answer options each criterion offers. Open from the gear icon in the top-right.</p>
+            <p style="margin:0 0 8px;">Each criterion has a label, an optional hint, and a list of options — each option has a label and a 1–10 score. You can also add custom <strong>detail fields</strong> (text, select, date) that aren't scored but capture context.</p>
+            <p style="margin:0;">Existing projects keep their original criteria via a snapshot — changes here only affect new submissions, so historical scores stay comparable.</p>
           </div>
         </div>
 
         <div class="help-topic">
           <div class="help-topic-header" onclick="toggleHelp(this)">
-            <span class="help-topic-title">Exporting the sales form</span>
+            <span class="help-topic-title">Scoring weights tab</span>
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">From <strong>Settings → Sales form</strong>, export a standalone HTML file for Sales and CS reps.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">The export modal confirms your email address and CC — all EmailJS credentials come from Settings automatically</li>
-            <li style="margin-bottom:4px;">Reps must select a project type; only the relevant criteria for that type are shown</li>
-            <li style="margin-bottom:4px;">Scoring, weights, and tier logic are completely hidden from reps</li>
-            <li style="margin-bottom:4px;">Generate personalized rep links from <strong>Settings → Rep links</strong> — the rep's name and email pre-fill and lock automatically when they open their link</li>
-            <li style="margin-bottom:4px;">Three email notifications are available — all use pre-built HTML, no writing required: <strong>Intake notification</strong> (to PM), <strong>Submission auto-reply</strong> (to rep, optional), and <strong>Decision notification</strong> (manual from All Projects)</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="help-topic">
-          <div class="help-topic-header" onclick="toggleHelp(this)">
-            <span class="help-topic-title">Dashboard &amp; board view</span>
-            <span class="help-topic-chevron">▾</span>
-          </div>
-          <div class="help-topic-body">
-            <p style="margin:0 0 8px;">The Dashboard has two views — List and Board — plus a summary metrics panel at the top.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">The <strong>Summary metrics</strong> panel shows total projects, submissions this month, average score, acceptance rate, and overdue revisits — click any card to filter the list</li>
-            <li style="margin-bottom:4px;">Switch to <strong>Board view</strong> for a five-column kanban layout — drag cards between columns to update status instantly</li>
-            <li style="margin-bottom:4px;">Terminal columns (Accepted, Completed, Deferred, Passed) collapse by default to keep focus on active work — click the column header to expand or collapse</li>
-            <li style="margin-bottom:4px;">Sort board cards by score or date using the toolbar above the board</li>
-            <li style="margin-bottom:4px;">Filter board cards by project type using the type buttons in the toolbar</li>
-            <li style="margin-bottom:4px;">Overdue deferred projects are highlighted with a red left border accent in both list and board views</li>
-            </ul>
+            <p style="margin:0 0 8px;">Tune how much each criterion contributes to the final score. Total weight across criteria normalizes to 100%, and the tier thresholds at the bottom decide how a numeric score maps to <strong>Pursue</strong>, <strong>Evaluate</strong>, <strong>Defer</strong>, or <strong>Pass</strong>.</p>
+            <p style="margin:0 0 8px;">Project types let you apply different weight profiles for different request kinds — a feature ask might weight strategic alignment heavily, while a bug fix might weight revenue impact lower.</p>
+            <p style="margin:0;">Use the <strong>Presets</strong> bar to start from a sensible default and adjust from there.</p>
           </div>
         </div>
 
@@ -831,48 +823,23 @@
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">The Insights tab shows charts and tables built from your project data, with filters to scope everything to a specific time range, type, rep, or status.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">Six charts: submissions over time, pipeline by status, score distribution, avg score by rep, acceptance rate by type, and avg time to decision</li>
-            <li style="margin-bottom:4px;">Criteria scoring breakdown table — avg score per criterion across all projects, sorted highest to lowest. Useful for spotting where requests consistently score weak</li>
-            <li style="margin-bottom:4px;">Top customers table — submission volume, avg score, and acceptance rate per account</li>
-            <li style="margin-bottom:4px;">Filter bar at the top scopes all charts and tables simultaneously — use presets (last 30/90 days, etc.) or set a custom date range</li>
-            <li style="margin-bottom:4px;">Click <strong>Export report</strong> to generate a shareable HTML report that opens in a new tab and can be printed to PDF</li>
-            </ul>
+            <p style="margin:0 0 8px;">Aggregate analytics across all projects in the workspace. Submissions over time, status breakdown, tier distribution, request volume by type.</p>
+            <p style="margin:0;">Useful for retrospectives, status updates to leadership, or noticing patterns — like a sudden spike in deferred requests from one segment.</p>
           </div>
         </div>
 
         <div class="help-topic">
           <div class="help-topic-header" onclick="toggleHelp(this)">
-            <span class="help-topic-title">Submitters tab</span>
+            <span class="help-topic-title">Backing up settings</span>
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">The Submitters tab aggregates all submissions by rep, giving you a quick read on who's submitting what.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">Each rep card shows their total submissions, average score, acceptance rate, and last submission date</li>
-            <li style="margin-bottom:4px;">A color-coded status bar shows the breakdown of their submissions across all five statuses</li>
-            <li style="margin-bottom:4px;">Sort cards by submission count, average score, or acceptance rate</li>
-            <li style="margin-bottom:4px;">Click any rep card to jump to All Projects filtered to just their submissions</li>
-            <li style="margin-bottom:4px;">Generate personalized intake form links per rep from <strong>Settings → Rep links</strong> — their name and email pre-fill and lock on the form so attribution is always accurate</li>
-            </ul>
+            <p style="margin:0 0 8px;">Found in <strong>Settings → Settings backup</strong>. Exports your scoring rubric — criteria, weights, presets, project types, tier thresholds — as a JSON file.</p>
+            <p style="margin:0 0 8px;">Use it to back up before experimenting with the configurator, or to copy a rubric to another workspace. Import to restore.</p>
+            <p style="margin:0;">Projects are backed up separately in <strong>Settings → Projects backup</strong>; that one preserves all scoring data and snapshots so a restore is faithful.</p>
           </div>
         </div>
 
-        <div class="help-topic">
-          <div class="help-topic-header" onclick="toggleHelp(this)">
-            <span class="help-topic-title">Backing up and restoring settings</span>
-            <span class="help-topic-chevron">▾</span>
-          </div>
-          <div class="help-topic-body">
-            <p style="margin:0 0 8px;">All data lives in your browser's local storage. The <strong>Settings tab</strong> is the central place for everything administrative.</p>            <ul style="margin:0 0 0 1.1rem;padding:0;">
-            <li style="margin-bottom:4px;">Configure all three EmailJS template IDs and email addresses in one place</li>
-            <li style="margin-bottom:4px;">Generate and manage personalized rep links under <strong>Rep links</strong></li>
-            <li style="margin-bottom:4px;">Use <strong>Generate sample projects</strong> to seed the tracker with test data — <strong>Clear sample projects</strong> removes only the generated ones</li>
-            <li style="margin-bottom:4px;">Export or import a full settings backup (criteria, weights, presets, thresholds, help content)</li>
-            <li style="margin-bottom:4px;">Separately export or restore a JSON backup of saved projects</li>
-            <li style="margin-bottom:4px;"><strong>Save as defaults</strong> sets a local restore point — <strong>Reset to defaults</strong> returns to your saved configuration, not the original built-ins</li>
-            </ul>
-          </div>
-        </div>
       </div>
 
       <div class="help-section" style="margin-top:1rem;">
@@ -1556,8 +1523,8 @@
 </footer>
 
 <script>
-const VERSION = '1.15.0';
-const BUILD_STAMP = '2026-04-30 07:25:08 PM EST';
+const VERSION = '1.15.1';
+const BUILD_STAMP = '2026-04-30 07:41:40 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -6169,19 +6136,19 @@ const TOUR_STEPS = [
     tab: 'tracker',
     target: '#new-request-fab',
     title: 'New request',
-    body: 'Use the + button in the bottom-right to open the intake form. Score a request yourself, or import a submission that arrived via email from the exported sales form.'
+    body: 'Use the + button in the bottom-right to score a request yourself. Most requests come in via the rep portal, but this is here for the times you need to add one directly.'
   },
   {
     tab: 'submitters',
     target: '#tab-submitters',
-    title: 'Submitters',
-    body: 'See analytics per rep — submission count, average score, acceptance rate, and status breakdown. Click any card to filter the Dashboard to just their projects.'
+    title: 'Reps',
+    body: 'Manage who can submit through the rep portal. Add, deactivate, or copy a per-rep portal link. Click any rep card to filter the Dashboard to just their projects.'
   },
   {
     tab: 'help',
     target: '#tab-help',
     title: 'Configure & help',
-    body: "Use the ⚙ gear icon in the top-right to access Scoring weights, Edit criteria, and Settings. The Help tab has reference docs and an editable section for Sales & CS reps.",
+    body: "Use the ⚙ gear icon in the top-right to access Scoring weights, Edit criteria, and Settings. The Help tab has reference docs for every feature.",
     last: true
   }
 ];

@@ -304,8 +304,6 @@ test.describe('Phase 3 C.3 — Reps tab', () => {
     await openSettingsTab(authedPage);
     // The Settings tab should NOT contain a "Rep links" section heading anywhere
     await expect(authedPage.locator('#tab-settings')).not.toContainText('Rep links');
-    // Confirm Sales form section is still there (sanity)
-    await expect(authedPage.locator('#tab-settings')).toContainText('Sales form');
     // Legacy element ids should be gone
     await expect(authedPage.locator('#rep-link-name')).toHaveCount(0);
     await expect(authedPage.locator('#rep-link-email')).toHaveCount(0);

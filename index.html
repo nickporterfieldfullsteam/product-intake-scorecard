@@ -352,7 +352,6 @@
   @keyframes spin { to { transform:rotate(360deg); } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -643,65 +642,6 @@
       <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Audit log of transactional emails — new submissions and project updates. Newest first.</p>
       <div id="rn-list">
         <p style="font-size:13px;color:#888;font-style:italic;">Loading…</p>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">EmailJS configuration</div>
-      <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">These credentials are used to send email notifications when the exported sales form is submitted. <a href="https://www.emailjs.com" target="_blank" style="color:#185FA5;">Get your credentials at emailjs.com</a>.</p>
-      <div id="emailjs-settings-form"></div>
-      <div class="btn-row" style="margin-top:1rem;">
-        <button class="btn-primary" onclick="saveEmailJSSettings()">Save credentials</button>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">EmailJS setup guides</div>
-      <p style="font-size:13px;color:#888;margin-bottom:1rem;">Step-by-step instructions for both email templates. Click to expand.</p>
-
-      <div class="help-topic" style="margin-bottom:8px;">
-        <div class="help-topic-header" onclick="toggleHelp(this)">
-          <div style="flex:1;min-width:0;"><span class="help-topic-title">Intake form notification</span><span style="font-size:12px;color:#888;margin-left:10px;">Sent to PM when a rep submits a request</span></div>
-          <span class="help-topic-chevron" style="flex-shrink:0;">&#9662;</span>
-        </div>
-                <div class="help-topic-body">
-          <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Sent to the PM automatically when a rep submits the exported sales form. The email body is pre-built by the tool — just set Content to <code style="background:#f5f5f3;padding:1px 5px;border-radius:4px;">{{{message}}}</code>.</p>
-          <div>
-            <div style="display:flex;gap:14px;margin-bottom:1.25rem;"><div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;">1</div><div><p style="font-size:13px;font-weight:500;margin-bottom:4px;">Create a new template in EmailJS</p><p style="font-size:13px;color:#888;">Go to <a href="https://www.emailjs.com" target="_blank" style="color:#185FA5;">emailjs.com</a>, sign in, open <strong>Email Templates</strong> and click <strong>Create New Template</strong>.</p></div></div>
-            <div style="display:flex;gap:14px;margin-bottom:1.25rem;"><div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;">2</div><div><p style="font-size:13px;font-weight:500;margin-bottom:4px;">Configure the template fields</p><div style="background:#f5f5f3;border-radius:8px;padding:10px 14px;margin-bottom:8px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">To Email</td><td style="padding:5px 0;color:#1a1a1a;">Your PM email address (set directly in EmailJS — not a variable)</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">From Name</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{name}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">Reply To</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{email}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">CC</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{cc_email}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">Subject</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{subject}}</td></tr><tr><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">Content</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{{message}}}</td></tr></table></div><p style="font-size:12px;color:#888;">In the <strong>Content</strong> field, use <code style="background:#f5f5f3;padding:1px 5px;border-radius:4px;">{{{message}}}</code> (triple braces) — EmailJS will render the pre-built HTML email without escaping it.</p></div></div>
-            <div style="display:flex;gap:14px;"><div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;">3</div><div><p style="font-size:13px;font-weight:500;margin-bottom:4px;">Save and paste the Template ID</p><p style="font-size:13px;color:#888;">Click <strong>Save</strong>. Copy the template ID (e.g. <code style="background:#f5f5f3;padding:1px 6px;border-radius:4px;font-size:12px;">template_xxxxxxx</code>) and paste it into the <strong>Intake form template ID</strong> field in the EmailJS configuration above.</p></div></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="help-topic" style="margin-top:8px;">
-        <div class="help-topic-header" onclick="toggleHelp(this)">
-          <div style="flex:1;min-width:0;"><span class="help-topic-title">Submission auto-reply</span><span style="font-size:12px;color:#888;margin-left:10px;">Sent to rep automatically when they submit</span></div>
-          <span class="help-topic-chevron" style="flex-shrink:0;">&#9662;</span>
-        </div>
-                <div class="help-topic-body">
-          <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Sent to the rep automatically when they submit — no PM action needed. The email body is pre-built by the tool. Leave the Submission auto-reply ID blank to skip this email entirely.</p>
-          <div>
-            <div style="display:flex;gap:14px;margin-bottom:1.25rem;"><div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;">1</div><div><p style="font-size:13px;font-weight:500;margin-bottom:4px;">Create a new template in EmailJS</p><p style="font-size:13px;color:#888;">Go to <a href="https://www.emailjs.com" target="_blank" style="color:#185FA5;">emailjs.com</a>, sign in, open <strong>Email Templates</strong> and click <strong>Create New Template</strong>.</p></div></div>
-            <div style="display:flex;gap:14px;margin-bottom:1.25rem;"><div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;">2</div><div><p style="font-size:13px;font-weight:500;margin-bottom:4px;">Configure the template fields</p><div style="background:#f5f5f3;border-radius:8px;padding:10px 14px;margin-bottom:8px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">To Email</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{to_email}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">From Name</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{name}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">Reply To</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{email}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">CC</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{cc_email}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">Subject</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{subject}}</td></tr><tr><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">Content</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{{message}}}</td></tr></table></div><p style="font-size:12px;color:#888;">In the <strong>Content</strong> field, use <code style="background:#f5f5f3;padding:1px 5px;border-radius:4px;">{{{message}}}</code> (triple braces) — EmailJS will render the pre-built HTML email without escaping it.</p></div></div>
-            <div style="display:flex;gap:14px;"><div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;">3</div><div><p style="font-size:13px;font-weight:500;margin-bottom:4px;">Save and paste the Template ID</p><p style="font-size:13px;color:#888;">Click <strong>Save</strong>. Copy the template ID (e.g. <code style="background:#f5f5f3;padding:1px 6px;border-radius:4px;font-size:12px;">template_xxxxxxx</code>) and paste it into the <strong>Submission auto-reply ID</strong> field in the EmailJS configuration above.</p></div></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="help-topic">
-        <div class="help-topic-header" onclick="toggleHelp(this)">
-          <div style="flex:1;min-width:0;"><span class="help-topic-title">Decision notification</span><span style="font-size:12px;color:#888;margin-left:10px;">Sent to submitter when a decision is made</span></div>
-          <span class="help-topic-chevron" style="flex-shrink:0;">&#9662;</span>
-        </div>
-                <div class="help-topic-body">
-          <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Triggered manually from the Dashboard when a PM sends a decision. The email body is pre-built by the tool — just set Content to <code style="background:#f5f5f3;padding:1px 5px;border-radius:4px;">{{{message}}}</code>.</p>
-          <div>
-            <div style="display:flex;gap:14px;margin-bottom:1.25rem;"><div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;">1</div><div><p style="font-size:13px;font-weight:500;margin-bottom:4px;">Create a new template in EmailJS</p><p style="font-size:13px;color:#888;">Go to <a href="https://www.emailjs.com" target="_blank" style="color:#185FA5;">emailjs.com</a>, sign in, open <strong>Email Templates</strong> and click <strong>Create New Template</strong>.</p></div></div>
-            <div style="display:flex;gap:14px;margin-bottom:1.25rem;"><div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;">2</div><div><p style="font-size:13px;font-weight:500;margin-bottom:4px;">Configure the template fields</p><div style="background:#f5f5f3;border-radius:8px;padding:10px 14px;margin-bottom:8px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">To Email</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{to_email}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">From Name</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{name}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">Reply To</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{email}}</td></tr><tr style="border-bottom:1px solid #e5e5e5;"><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">Subject</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">Update on your project request: {{project_name}}</td></tr><tr><td style="padding:5px 8px 5px 0;color:#888;white-space:nowrap;width:120px;">Content</td><td style="padding:5px 0;font-family:monospace;color:#185FA5;">{{{message}}}</td></tr></table></div><p style="font-size:12px;color:#888;">In the <strong>Content</strong> field, use <code style="background:#f5f5f3;padding:1px 5px;border-radius:4px;">{{{message}}}</code> (triple braces) — EmailJS will render the pre-built HTML email without escaping it.</p></div></div>
-            <div style="display:flex;gap:14px;"><div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;">3</div><div><p style="font-size:13px;font-weight:500;margin-bottom:4px;">Save and paste the Template ID</p><p style="font-size:13px;color:#888;">Click <strong>Save</strong>. Copy the template ID (e.g. <code style="background:#f5f5f3;padding:1px 6px;border-radius:4px;font-size:12px;">template_xxxxxxx</code>) and paste it into the <strong>Decision email template ID</strong> field above. Then send from the Dashboard by expanding a project row and clicking <strong>Send decision email</strong>.</p></div></div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -1594,7 +1534,7 @@
     </button>
     <button onclick="closeConfigDrawer();showConfigTab('settings')" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 1.25rem;border:none;background:none;font-family:inherit;font-size:14px;color:#1a1a1a;cursor:pointer;text-align:left;" onmouseover="this.style.background='#fafaf9'" onmouseout="this.style.background='none'">
       <span style="font-size:16px;">&#x2699;</span>
-      <div><div style="font-weight:500;">Settings</div><div style="font-size:12px;color:#888;">EmailJS, rep links, backups</div></div>
+      <div><div style="font-weight:500;">Settings</div><div style="font-size:12px;color:#888;">Workspace members, notifications, backups</div></div>
     </button>
   </div>
 </div>
@@ -1617,7 +1557,7 @@
 
 <script>
 const VERSION = '1.15.0';
-const BUILD_STAMP = '2026-04-30 01:59:42 PM EST';
+const BUILD_STAMP = '2026-04-30 07:25:08 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5586,65 +5526,6 @@ async function generateSampleProjects() {
   }
 }
 
-/* ── SETTINGS TAB ── */
-function buildSettingsEmailJS() {
-  const container = document.getElementById('emailjs-settings-form');
-  if (!container) return;
-  const saved = JSON.parse(localStorage.getItem('pm_emailjs') || '{}');
-  container.innerHTML = `
-    <div class="form-row" style="margin-bottom:12px;">
-      <div class="field" style="margin-bottom:0;">
-        <label style="font-size:13px;">Public key</label>
-        <input type="text" id="sejs-pubkey" placeholder="e.g. abc123XYZ" value="${saved.publicKey||''}">
-      </div>
-      <div class="field" style="margin-bottom:0;">
-        <label style="font-size:13px;">Service ID</label>
-        <input type="text" id="sejs-service" placeholder="e.g. service_xxxxxxx" value="${saved.serviceId||''}">
-      </div>
-    </div>
-    <div class="form-row" style="margin-bottom:12px;">
-      <div class="field" style="margin-bottom:0;">
-        <label style="font-size:13px;">Intake form template ID</label>
-        <input type="text" id="sejs-template" placeholder="e.g. template_xxxxxxx" value="${saved.templateId||''}">
-      </div>
-      <div class="field" style="margin-bottom:0;">
-        <label style="font-size:13px;">Decision email template ID</label>
-        <input type="text" id="sejs-decision-template" placeholder="e.g. template_xxxxxxx" value="${saved.decisionTemplateId||''}">
-      </div>
-    </div>
-    <div class="form-row" style="margin-bottom:12px;">
-      <div class="field" style="margin-bottom:0;">
-        <label style="font-size:13px;">Submission auto-reply ID <span style="font-weight:400;color:#888;">(optional)</span></label>
-        <input type="text" id="sejs-autoreply-template" placeholder="e.g. template_xxxxxxx" value="${saved.autoReplyTemplateId||''}">
-      </div>
-      <div class="field" style="margin-bottom:0;"></div>
-    </div>
-    <div class="form-row" style="margin-bottom:12px;">
-      <div class="field" style="margin-bottom:0;">
-        <label style="font-size:13px;">Your email (where alerts go)</label>
-        <input type="text" id="sejs-email" placeholder="e.g. you@company.com" value="${saved.toEmail||''}">
-      </div>
-      <div class="field" style="margin-bottom:0;">
-        <label style="font-size:13px;">CC <span style="font-weight:400;color:#888;">(optional — comma-separated)</span></label>
-        <input type="text" id="sejs-cc" placeholder="e.g. colleague@company.com" value="${saved.ccEmail||''}">
-      </div>
-    </div>
-`;
-}
-
-function saveEmailJSSettings() {
-  const publicKey  = (document.getElementById('sejs-pubkey')   || {}).value?.trim();
-  const serviceId  = (document.getElementById('sejs-service')  || {}).value?.trim();
-  const templateId         = (document.getElementById('sejs-template')          || {}).value?.trim();
-  const decisionTemplateId  = (document.getElementById('sejs-decision-template')  || {}).value?.trim();
-  const autoReplyTemplateId = (document.getElementById('sejs-autoreply-template') || {}).value?.trim();
-  const toEmail             = (document.getElementById('sejs-email')              || {}).value?.trim();
-  const ccEmail             = (document.getElementById('sejs-cc')                 || {}).value?.trim();
-  if (!publicKey || !serviceId || !templateId || !toEmail) { toast('Please fill in all required fields.'); return; }
-  localStorage.setItem('pm_emailjs', JSON.stringify({ publicKey, serviceId, templateId, decisionTemplateId, autoReplyTemplateId, toEmail, ccEmail }));
-  toast('EmailJS credentials saved!');
-}
-
 function exportProjects() {
   if (!projects.length) { toast('No projects to export.'); return; }
   const payload = { version: 1, exportedAt: new Date().toISOString(), projects };
@@ -5712,10 +5593,6 @@ function runAutoQA() {
   }
 
   // ── Settings tab (qa-0-x)
-  check('qa-0-0', 'EmailJS credentials pre-populated', () => {
-    const saved = JSON.parse(localStorage.getItem('pm_emailjs') || '{}');
-    return saved.publicKey && saved.serviceId;
-  });
   check('qa-0-3', 'Export settings backup function exists', () => typeof exportSettings === 'function');
   check('qa-0-4', 'Import settings function exists', () => typeof importSettings === 'function');
   check('qa-0-5', 'Save as defaults function exists', () => typeof saveAsDefaults === 'function');
@@ -5953,7 +5830,6 @@ function showTab(tab) {
   if (tab === 'editor') { renderEditor(); renderDetailEditor(); }
   if (tab === 'help') { renderSalesHelpEditor(); setTimeout(loadQA, 50); }
   if (tab === 'settings') {
-    buildSettingsEmailJS();
     const emailEl = document.getElementById('settings-user-email');
     if (emailEl) emailEl.textContent = currentUser?.email || '';
     loadWorkspaceMembers();
@@ -5979,18 +5855,6 @@ async function init() {
   } catch(e) {
     console.error('[Arbiter] Init render error:', e);
   }
-}
-
-// Pre-fill EmailJS credentials if not already set
-if (!localStorage.getItem('pm_emailjs')) {
-  localStorage.setItem('pm_emailjs', JSON.stringify({
-    publicKey:          'Hq4UGI-VZvziEwA__',
-    serviceId:          'service_g1n6kjz',
-    templateId:         'template_gk4tljc',
-    decisionTemplateId: 'template_1yeuaqj',
-    toEmail:            'nick.porterfield@fullsteam.com',
-    ccEmail:            ''
-  }));
 }
 
 
@@ -6216,7 +6080,6 @@ function showConfigTab(tab) {
     if (tab === 'weights') { buildPresetButtons(); buildWeightSliders(); buildTierThresholds(); buildProjectTypeMappings(); }
     if (tab === 'editor') { renderEditor(); renderDetailEditor(); }
     if (tab === 'settings') {
-      buildSettingsEmailJS();
       const emailEl = document.getElementById('settings-user-email');
       if (emailEl) emailEl.textContent = currentUser?.email || '';
       loadWorkspaceMembers();

@@ -637,6 +637,17 @@
     </div>
 
     <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div class="section-title" style="margin-bottom:0;">Recent notifications</div>
+        <button class="btn-secondary" style="font-size:12px;padding:4px 12px;" onclick="loadRecentNotifications()">Refresh</button>
+      </div>
+      <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Audit log of transactional emails — new submissions and project updates. Newest first.</p>
+      <div id="rn-list">
+        <p style="font-size:13px;color:#888;font-style:italic;">Loading…</p>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title">EmailJS configuration</div>
       <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">These credentials are used to send email notifications when the exported sales form is submitted. <a href="https://www.emailjs.com" target="_blank" style="color:#185FA5;">Get your credentials at emailjs.com</a>.</p>
       <div id="emailjs-settings-form"></div>
@@ -1619,8 +1630,8 @@
 </footer>
 
 <script>
-const VERSION = '1.14.0';
-const BUILD_STAMP = '2026-04-28 11:26:13 PM EST';
+const VERSION = '1.14.2';
+const BUILD_STAMP = '2026-04-29 08:44:06 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1885,7 +1896,7 @@ async function loadWorkspaceMembers() {
   // Run both queries in parallel — they're independent
   const [memRes, emailRes] = await Promise.all([
     _sb.from('workspace_members')
-      .select('id, user_id, role, joined_at')
+      .select('id, user_id, role, joined_at, notification_prefs')
       .eq('workspace_id', currentWorkspaceId)
       .order('joined_at', { ascending: true }),
     _sb.rpc('list_workspace_member_emails', { p_workspace_id: currentWorkspaceId }),
@@ -1909,6 +1920,7 @@ async function loadWorkspaceMembers() {
     role: m.role,
     joinedAt: m.joined_at,
     email: emailMap.get(m.user_id) || '(unknown email)',
+    notificationPrefs: m.notification_prefs || {},
   }));
   renderWorkspaceMembers();
 }
@@ -1925,6 +1937,18 @@ function renderWorkspaceMembers() {
     const isSelf = m.userId === myUserId;
     const isPendingRemoval = pendingMemberRemoval === m.id;
     const joinedRel = formatRelativeDate(m.joinedAt);
+    // Default-true semantics: missing/null pref means "subscribed"
+    const subToNewSubmission = m.notificationPrefs?.new_submission !== false;
+    const prefToggle = isSelf
+      ? `<div style="font-size:11px;color:#666;margin-top:6px;">
+           <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+             <input type="checkbox" ${subToNewSubmission ? 'checked' : ''}
+                    onchange="updateMyNotificationPref('new_submission', this.checked)"
+                    style="margin:0;cursor:pointer;">
+             Email me on new submissions
+           </label>
+         </div>`
+      : '';
     return `
       <div class="wm-row" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #f0f0ee;border-radius:8px;margin-bottom:6px;background:#fff;">
         <div style="flex:1;min-width:0;">
@@ -1932,6 +1956,7 @@ function renderWorkspaceMembers() {
             ${escapeHtml(m.email)}${isSelf ? ' <span style="font-size:11px;color:#888;font-weight:400;">(you)</span>' : ''}
           </div>
           <div style="font-size:11px;color:#888;margin-top:2px;">Joined ${joinedRel}</div>
+          ${prefToggle}
         </div>
         <select
           style="font-size:13px;padding:5px 8px;width:88px;${isSelf ? 'opacity:0.5;cursor:not-allowed;' : ''}"
@@ -2051,6 +2076,109 @@ async function confirmRemoveMember(memberId) {
   }
   toast('Member removed.');
   await loadWorkspaceMembers();
+}
+
+/**
+ * Toggle one notification preference key for the current user. Calls the
+ * SECURITY DEFINER RPC introduced in migration 009. Optimistic update:
+ * we patch the local state immediately so the checkbox responds, and
+ * roll back on RPC failure.
+ */
+async function updateMyNotificationPref(key, value) {
+  const myUserId = currentUser?.id;
+  if (!myUserId || !currentWorkspaceId) return;
+  // Find self row
+  const self = workspaceMembers.find(m => m.userId === myUserId);
+  if (!self) return;
+  const oldPrefs = self.notificationPrefs || {};
+  const newPrefs = { ...oldPrefs, [key]: value };
+  // Optimistic update
+  self.notificationPrefs = newPrefs;
+  const { error } = await _sb.rpc('update_my_notification_prefs', {
+    p_workspace_id: currentWorkspaceId,
+    p_prefs: newPrefs,
+  });
+  if (error) {
+    console.warn('[Arbiter] update_my_notification_prefs failed:', error);
+    toast('Failed to update preference: ' + error.message);
+    // Roll back
+    self.notificationPrefs = oldPrefs;
+    renderWorkspaceMembers();
+    return;
+  }
+  // No toast on success — checkbox flip is its own confirmation
+}
+
+/* ── RECENT NOTIFICATIONS ──
+ *
+ * Audit log surface in the Settings tab. Reads from sent_notifications
+ * (introduced in migration 008). RLS lets workspace_members see their
+ * own workspace's rows.
+ *
+ * Joined with projects to get the name. project_id can be null (project
+ * was deleted after notification was sent — ON DELETE SET NULL).
+ */
+async function loadRecentNotifications() {
+  const container = document.getElementById('rn-list');
+  if (!container) return;
+  container.innerHTML = '<p style="font-size:13px;color:#888;font-style:italic;">Loading…</p>';
+  if (!currentWorkspaceId) return;
+  // Join to projects to get the name. Use !inner only on no-deleted-project
+  // rows would lose history, so use a left join semantics via foreign-key
+  // expansion — Supabase JS supports `projects(name)` shorthand.
+  const { data, error } = await _sb
+    .from('sent_notifications')
+    .select('id, event_type, recipient_email, status, error, changes, created_at, project_id, projects(name)')
+    .eq('workspace_id', currentWorkspaceId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) {
+    console.warn('[Arbiter] Failed to load notifications:', error);
+    container.innerHTML = '<p style="font-size:13px;color:#a32d2d;">Failed to load notifications. ' + escapeHtml(error.message || '') + '</p>';
+    return;
+  }
+  renderRecentNotifications(data || []);
+}
+
+function renderRecentNotifications(rows) {
+  const container = document.getElementById('rn-list');
+  if (!container) return;
+  if (!rows.length) {
+    container.innerHTML = '<p style="font-size:13px;color:#888;font-style:italic;">No notifications yet — they\'ll appear here when reps submit or PMs decide.</p>';
+    return;
+  }
+  container.innerHTML = rows.map(r => {
+    const eventLabel = r.event_type === 'new_submission' ? 'New submission' : 'Project update';
+    const projectName = r.projects?.name || (r.project_id ? '(deleted project)' : '—');
+    const when = formatRelativeDate(r.created_at);
+    const statusInfo = notificationStatusInfo(r.status);
+    const errorTitle = r.error ? ` title="${escapeHtml(r.error)}"` : '';
+    const changesPart = (r.event_type === 'project_updated' && r.changes?.length)
+      ? `<span style="font-size:11px;color:#888;margin-left:6px;">${escapeHtml(r.changes.join(', '))}</span>`
+      : '';
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #f0f0ee;border-radius:8px;margin-bottom:6px;background:#fff;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${escapeHtml(eventLabel)} <span style="font-weight:400;color:#666;">→</span> ${escapeHtml(projectName)}${changesPart}
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${escapeHtml(r.recipient_email)} · ${escapeHtml(when)}
+          </div>
+        </div>
+        <span${errorTitle} style="display:inline-block;background:${statusInfo.bg};color:${statusInfo.fg};font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;padding:3px 10px;border-radius:6px;${r.error ? 'cursor:help;' : ''}">${escapeHtml(statusInfo.label)}</span>
+      </div>`;
+  }).join('');
+}
+
+function notificationStatusInfo(status) {
+  switch (status) {
+    case 'sent':                return { label: 'Sent',     bg: '#dcf2e3', fg: '#1a5f2e' };
+    case 'failed':              return { label: 'Failed',   bg: '#fce4e4', fg: '#9b1c1c' };
+    case 'skipped_preference':  return { label: 'Skipped',  bg: '#f0f0ee', fg: '#666'    };
+    case 'skipped_self':        return { label: 'Self',     bg: '#f0f0ee', fg: '#666'    };
+    default:                    return { label: status,     bg: '#f0f0ee', fg: '#666'    };
+  }
 }
 
 async function sbUpsertProject(proj) {
@@ -6732,6 +6860,7 @@ function showTab(tab) {
     const emailEl = document.getElementById('settings-user-email');
     if (emailEl) emailEl.textContent = currentUser?.email || '';
     loadWorkspaceMembers();
+    loadRecentNotifications();
   }
 }
 
@@ -6994,6 +7123,7 @@ function showConfigTab(tab) {
       const emailEl = document.getElementById('settings-user-email');
       if (emailEl) emailEl.textContent = currentUser?.email || '';
       loadWorkspaceMembers();
+      loadRecentNotifications();
     }
   }
   // Show a back button

@@ -66,6 +66,38 @@ async function sendEmail(
   }
 }
 
+// ── Audit ──
+//
+// Records a notification attempt to the sent_notifications table. Wrapped
+// in try/catch so audit failures never break the notification flow — the
+// log is observability infrastructure, not part of the critical path.
+async function recordAttempt(opts: {
+  workspaceId: string;
+  projectId: string | null;
+  eventType: string;
+  recipientEmail: string;
+  status: "sent" | "failed" | "skipped_preference" | "skipped_self";
+  error?: string;
+  changes?: string[];
+}): Promise<void> {
+  try {
+    const { error } = await sb.from("sent_notifications").insert({
+      workspace_id: opts.workspaceId,
+      project_id: opts.projectId,
+      event_type: opts.eventType,
+      recipient_email: opts.recipientEmail,
+      status: opts.status,
+      error: opts.error || null,
+      changes: opts.changes || null,
+    });
+    if (error) {
+      console.warn("[notify] audit insert failed:", error.message);
+    }
+  } catch (err) {
+    console.warn("[notify] audit insert threw:", String(err));
+  }
+}
+
 // ── HTML email builders ──
 //
 // Both share the same shell as the magic-link template: centered card,
@@ -395,14 +427,26 @@ function emailProjectUpdated(
 }
 
 // ── Recipient lookups ──
-async function getWorkspaceMemberEmails(workspaceId: string): Promise<string[]> {
+type WorkspaceMemberInfo = {
+  email: string;
+  prefs: Record<string, unknown>;
+};
+
+async function getWorkspaceMembers(
+  workspaceId: string,
+): Promise<WorkspaceMemberInfo[]> {
   const { data: members, error: mErr } = await sb
     .from("workspace_members")
-    .select("user_id")
+    .select("user_id, notification_prefs")
     .eq("workspace_id", workspaceId);
   if (mErr) throw new Error(`workspace_members lookup failed: ${mErr.message}`);
   if (!members?.length) return [];
-  const ids = new Set(members.map((m) => m.user_id));
+
+  // Build user_id -> prefs map
+  const prefsByUserId = new Map<string, Record<string, unknown>>();
+  for (const m of members) {
+    prefsByUserId.set(m.user_id, m.notification_prefs || {});
+  }
 
   // The supabase-js client's `.schema('auth').from('users')` doesn't work,
   // and the list_workspace_member_emails RPC depends on auth.uid() which
@@ -418,11 +462,21 @@ async function getWorkspaceMemberEmails(workspaceId: string): Promise<string[]> 
     perPage: 1000,
   });
   if (uErr) throw new Error(`auth admin listUsers failed: ${uErr.message}`);
-  const emails: string[] = [];
+
+  const result: WorkspaceMemberInfo[] = [];
   for (const u of usersResp.users) {
-    if (ids.has(u.id) && u.email) emails.push(u.email);
+    if (!u.email) continue;
+    const prefs = prefsByUserId.get(u.id);
+    if (prefs === undefined) continue;
+    result.push({ email: u.email, prefs });
   }
-  return emails;
+  return result;
+}
+
+// Default-true semantics: a missing/null pref means "subscribed".
+// We only suppress when the pref is explicitly false.
+function isSubscribed(prefs: Record<string, unknown>, eventType: string): boolean {
+  return prefs[eventType] !== false;
 }
 
 // ── Main handler ──
@@ -480,28 +534,65 @@ Deno.serve(async (req) => {
   }
 
   let results: SendResult[] = [];
+  let skipped = 0;
 
   if (body.event_type === "new_submission") {
     // Fetch workspace_config in parallel for detail/criteria labels
-    const [recipientsResult, configResult] = await Promise.all([
-      getWorkspaceMemberEmails(project.workspace_id),
+    const [members, configResult] = await Promise.all([
+      getWorkspaceMembers(project.workspace_id),
       sb.from("workspace_config")
         .select("detail_fields, criteria")
         .eq("workspace_id", project.workspace_id)
         .maybeSingle(),
     ]);
-    const recipients = recipientsResult;
     const config = configResult.data || {};
-    if (!recipients.length) {
+    if (!members.length) {
       return new Response(
         JSON.stringify({ sent: 0, skipped: "no workspace members" }),
         { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
       );
     }
+
+    // Split into "send" and "skip" buckets based on notification preferences.
+    // Default-true: a member with no opinion gets the email.
+    const toSend: string[] = [];
+    const toSkip: string[] = [];
+    for (const m of members) {
+      if (isSubscribed(m.prefs, "new_submission")) {
+        toSend.push(m.email);
+      } else {
+        toSkip.push(m.email);
+      }
+    }
+    skipped = toSkip.length;
+
     const { subject, html } = emailNewSubmission(project, config);
     results = await Promise.all(
-      recipients.map((email) => sendEmail(email, subject, html)),
+      toSend.map((email) => sendEmail(email, subject, html)),
     );
+
+    // Audit every send result + every skip
+    await Promise.all([
+      ...results.map((r) =>
+        recordAttempt({
+          workspaceId: project.workspace_id,
+          projectId: project.id,
+          eventType: "new_submission",
+          recipientEmail: r.email,
+          status: r.ok ? "sent" : "failed",
+          error: r.error,
+        })
+      ),
+      ...toSkip.map((email) =>
+        recordAttempt({
+          workspaceId: project.workspace_id,
+          projectId: project.id,
+          eventType: "new_submission",
+          recipientEmail: email,
+          status: "skipped_preference",
+        })
+      ),
+    ]);
   } else if (body.event_type === "project_updated") {
     if (!project.submitter_email) {
       return new Response(
@@ -518,6 +609,16 @@ Deno.serve(async (req) => {
     }
     const { subject, html } = emailProjectUpdated(project, changes);
     results = [await sendEmail(project.submitter_email, subject, html)];
+    // Audit
+    await recordAttempt({
+      workspaceId: project.workspace_id,
+      projectId: project.id,
+      eventType: "project_updated",
+      recipientEmail: project.submitter_email,
+      status: results[0].ok ? "sent" : "failed",
+      error: results[0].error,
+      changes,
+    });
   } else {
     return new Response(
       JSON.stringify({ error: `Unknown event_type: ${(body as any).event_type}` }),
@@ -528,7 +629,7 @@ Deno.serve(async (req) => {
   const sent = results.filter((r) => r.ok).length;
   const failed = results.length - sent;
   return new Response(
-    JSON.stringify({ sent, failed, results }),
+    JSON.stringify({ sent, failed, skipped, results }),
     { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
   );
 });

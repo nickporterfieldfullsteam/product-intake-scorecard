@@ -1630,8 +1630,8 @@
 </footer>
 
 <script>
-const VERSION = '1.14.2';
-const BUILD_STAMP = '2026-04-29 08:44:06 PM EST';
+const VERSION = '1.15.0';
+const BUILD_STAMP = '2026-04-30 01:31:29 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -3011,7 +3011,6 @@ function openKanbanCard(id) {
       <div class="modal-btns">
         <button class="btn-secondary" onclick="closeProjectModal('${p.id}', this.closest('.modal-overlay'))">Cancel</button>
         <button class="btn-primary" data-draft-save="${p.id}" disabled onclick="saveAndCloseProjectModal('${p.id}', this.closest('.modal-overlay'))">Save</button>
-        <button class="btn-secondary" onclick="autoSaveThen('${p.id}', () => { this.closest('.modal-overlay').remove(); showDecisionEmailModal('${p.id}'); })">Send decision email</button>
         <button class="btn-secondary" onclick="autoSaveThen('${p.id}', () => { this.closest('.modal-overlay').remove(); editProject('${p.id}'); })">Edit &amp; re-score</button>
       </div>
     </div>`;
@@ -4317,7 +4316,6 @@ function renderProjectList() {
         </details>` : ''}
         <div class="btn-row">
           <button class="btn-primary" style="font-size:12px;padding:6px 14px;" data-draft-save="${p.id}" disabled onclick="saveDraft('${p.id}')">Save</button>
-          <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="autoSaveThen('${p.id}', () => showDecisionEmailModal('${p.id}'))">Send decision email</button>
           <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="autoSaveThen('${p.id}', () => editProject('${p.id}'))">Edit &amp; re-score</button>
           <span style="flex:1;"></span>
           <button class="btn-danger-inline" style="font-size:12px;" data-delete-id="${p.id}" onclick="deleteProject('${p.id}')">Delete project</button>
@@ -4693,169 +4691,6 @@ function decisionVerb(status) {
   if (status === 'Deferred') return 'deferred';
   if (status === 'Passed')   return 'passed on';
   return status.toLowerCase();
-}
-
-function buildDecisionPreview(name, submitterName, status, notes, revisitDate) {
-  const decisionColors = { 'Accepted': { bg:'#EAF3DE', text:'#27500A' }, 'Deferred': { bg:'#FAEEDA', text:'#633806' }, 'Passed': { bg:'#FCEBEB', text:'#501313' } };
-  const dc = decisionColors[status] || decisionColors['Passed'];
-  const fmtDate = fmtRevisitDate(revisitDate);
-  const revisitClause = (status === 'Deferred' && fmtDate) ? ` We plan to revisit this on <strong>${fmtDate}</strong>.` : '';
-  const notesBlock = notes ? `<div style="margin:10px 0;"><p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px;">Decision notes</p><div style="background:#f5f5f3;border-left:3px solid #ddd;border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:#555;">${notes}</div></div>` : '';
-  return `<div style="background:#f5f5f3;border-radius:10px;overflow:hidden;border:1px solid #e5e5e5;">
-    <div style="padding:16px 20px 14px;border-bottom:1px solid #e5e5e5;background:#fff;">
-      <p style="font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin:0 0 4px;">Project request update</p>
-      <p style="font-size:15px;font-weight:500;color:#1a1a1a;margin:0 0 6px;">${name}</p>
-      <span style="display:inline-block;background:${dc.bg};color:${dc.text};font-size:12px;font-weight:500;padding:3px 10px;border-radius:6px;">${status}</span>
-    </div>
-    <div style="padding:16px 20px;background:#fff;">
-      <p style="font-size:13px;color:#1a1a1a;margin:0 0 10px;">Hi ${submitterName || 'there'},</p>
-      <p style="font-size:13px;color:#555;margin:0 0 8px;">Thank you for submitting your project request. After review, your project request has been <strong>${decisionVerb(status)}</strong>.${revisitClause}</p>
-      ${notesBlock}
-      ${status === 'Passed' ? `<p style="font-size:13px;color:#555;margin:8px 0;">If you feel this project should be given a second review, please submit the Project Request Form again and note that you are requesting a re-review of the project within the <strong>Notes / additional context</strong> field.</p>` : ''}
-      <p style="font-size:13px;color:#555;margin:0;">If you have any questions, feel free to reply to this email.</p>
-    </div>
-    <div style="padding:10px 20px;background:#f5f5f3;border-top:1px solid #e5e5e5;">
-      <p style="font-size:11px;color:#aaa;margin:0;">Sent via Arbiter</p>
-    </div>
-  </div>`;
-}
-
-function showDecisionEmailModal(id) {
-  const p = projects.find(x => x.id == id); if (!p) return;
-  const submitterEmail = (p.lockedVals && p.lockedVals['__email__']) || '';
-  const submitterName = (p.lockedVals && p.lockedVals['__submitter__']) || '';
-  const initialStatus = ['Accepted','Completed','Deferred','Passed'].includes(p.status) ? p.status : 'Accepted';
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML = `
-    <div class="modal" style="max-width:540px;max-height:90vh;overflow-y:auto;">
-      <h2>Send decision email</h2>
-      <p>Notify the submitter of the decision for <strong>${p.name}</strong>.</p>
-      <div class="field">
-        <label style="font-size:13px;">To</label>
-        <input type="text" id="de-email" value="${submitterEmail}" placeholder="submitter@email.com">
-      </div>
-      <div class="field">
-        <label style="font-size:13px;">Decision</label>
-        <select id="de-status" style="font-size:13px;" onchange="updateDecisionPreview('${p.id}')">
-          ${STATUS_ORDER.filter(s => ['Accepted','Completed','Deferred','Passed'].includes(s)).map(s => `<option value="${s}" ${initialStatus===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field" id="de-revisit-field" style="display:${initialStatus === 'Deferred' ? 'block' : 'none'};">
-        <label style="font-size:13px;">Revisit date</label>
-        <div style="display:flex;gap:6px;">
-          <select style="font-size:13px;flex:1.2;" id="de-rd-m" onchange="updateDecisionPreview('${p.id}')">${(()=>{ const rdParts=(p.revisitDate||'').split('-'); const rdM=rdParts[1]||''; const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return '<option value="">MM</option>'+['01','02','03','04','05','06','07','08','09','10','11','12'].map((m,i)=>`<option value="${m}" ${rdM===m?'selected':''}>${mNames[i]}</option>`).join(''); })()}</select>
-          <select style="font-size:13px;flex:1;" id="de-rd-d" onchange="updateDecisionPreview('${p.id}')">${(()=>{ const rdParts=(p.revisitDate||'').split('-'); const rdD=rdParts[2]||''; return '<option value="">DD</option>'+Array.from({length:31},(_,i)=>String(i+1).padStart(2,'0')).map(d=>`<option value="${d}" ${rdD===d?'selected':''}>${d}</option>`).join(''); })()}</select>
-          <select style="font-size:13px;flex:1.3;" id="de-rd-y" onchange="updateDecisionPreview('${p.id}')">${(()=>{ const rdParts=(p.revisitDate||'').split('-'); const rdY=rdParts[0]||''; const curY=new Date().getFullYear(); return '<option value="">YYYY</option>'+Array.from({length:5},(_,i)=>String(curY+i)).map(y=>`<option value="${y}" ${rdY===y?'selected':''}>${y}</option>`).join(''); })()}</select>
-        </div>
-      </div>
-      <div class="field">
-        <label style="font-size:13px;">Decision notes <span style="font-weight:400;color:#888;">(included in email)</span></label>
-        <textarea id="de-notes" style="min-height:60px;font-size:13px;" oninput="updateDecisionPreview('${p.id}')">${p.decisionNotes||''}</textarea>
-      </div>
-      <div class="field">
-        <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;display:block;">Email preview</label>
-        <div id="de-preview">${buildDecisionPreview(p.name, submitterName, initialStatus, p.decisionNotes||'', p.revisitDate||'')}</div>
-      </div>
-      <div class="modal-btns">
-        <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-        <button class="btn-primary" onclick="sendDecisionEmail('${p.id}')">Send email</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-}
-
-function updateDecisionPreview(id) {
-  const p = projects.find(x => x.id == id); if (!p) return;
-  const submitterName = (p.lockedVals && p.lockedVals['__submitter__']) || '';
-  const status = (document.getElementById('de-status') || {}).value || 'Accepted';
-  const notes = (document.getElementById('de-notes') || {}).value || '';
-  // Show/hide revisit date field
-  const rdField = document.getElementById('de-revisit-field');
-  if (rdField) rdField.style.display = status === 'Deferred' ? 'block' : 'none';
-  // Read revisit date from modal selects
-  const rdM = (document.getElementById('de-rd-m') || {}).value || '';
-  const rdD = (document.getElementById('de-rd-d') || {}).value || '';
-  const rdY = (document.getElementById('de-rd-y') || {}).value || '';
-  const revisitDate = (rdY && rdM && rdD) ? rdY + '-' + rdM + '-' + rdD : (p.revisitDate || '');
-  const preview = document.getElementById('de-preview');
-  if (preview) preview.innerHTML = buildDecisionPreview(p.name, submitterName, status, notes, revisitDate);
-}
-
-function sendDecisionEmail(id) {
-  const p = projects.find(x => x.id == id); if (!p) return;
-  const saved = JSON.parse(localStorage.getItem('pm_emailjs') || '{}');
-  const toEmail = document.getElementById('de-email').value.trim();
-  const status = document.getElementById('de-status').value;
-  const notes = document.getElementById('de-notes').value.trim();
-  const deRdM = (document.getElementById('de-rd-m') || {}).value || '';
-  const deRdD = (document.getElementById('de-rd-d') || {}).value || '';
-  const deRdY = (document.getElementById('de-rd-y') || {}).value || '';
-  const modalRevisitDate = (deRdY && deRdM && deRdD) ? deRdY + '-' + deRdM + '-' + deRdD : (p.revisitDate || '');
-  const templateId = saved.decisionTemplateId || '';
-  if (!toEmail) { toast('Please enter a recipient email.'); return; }
-  if (!templateId) { toast('Decision template ID not configured — check the Settings tab.'); return; }
-  if (!saved.publicKey || !saved.serviceId) { toast('EmailJS credentials not configured — check the Settings tab.'); return; }
-
-  p.decisionNotes = notes; p.status = status; p.revisitDate = modalRevisitDate;
-  _sb.from('projects').update({
-    decision_notes: notes,
-    status: status,
-    revisit_date: modalRevisitDate || null
-  }).eq('id', id);
-  // Update badge in place
-  const badge = document.getElementById('proj-status-badge-' + id);
-  const sc = STATUS_CONFIG[status] || STATUS_CONFIG['Submitted'];
-  if (badge) { badge.textContent = status; badge.style.background = sc.bg; badge.style.color = sc.color; }
-  buildStatusFilterBar();
-
-  if (typeof emailjs === 'undefined') {
-    toast('EmailJS not loaded. Make sure you are online.');
-    return;
-  }
-  emailjs.init(saved.publicKey);
-  const submitterName = (p.lockedVals && p.lockedVals['__submitter__']) || '';
-  const decisionColors = { 'Accepted': { bg:'#EAF3DE', text:'#27500A' }, 'Deferred': { bg:'#FAEEDA', text:'#633806' }, 'Passed': { bg:'#FCEBEB', text:'#501313' } };
-  const dc = decisionColors[status] || decisionColors['Passed'];
-  const fmtDate = fmtRevisitDate(modalRevisitDate || '');
-  const revisitClause = (status === 'Deferred' && fmtDate) ? ` We plan to revisit this on <strong>${fmtDate}</strong>.` : '';
-  const notesBlock = notes ? `<div style="margin:12px 0;"><p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px;">Decision notes</p><div style="background:#f5f5f3;border-left:3px solid #ddd;border-radius:0 6px 6px 0;padding:12px 16px;font-size:14px;color:#555;">${notes}</div></div>` : '';
-  const decisionMessage = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;margin:0;padding:24px;">
-  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e5e5;">
-    <div style="padding:24px 28px 20px;border-bottom:1px solid #e5e5e5;">
-      <p style="font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin:0 0 6px;">Project request update</p>
-      <h1 style="font-size:20px;font-weight:500;color:#1a1a1a;margin:0 0 4px;">${p.name}</h1>
-      <span style="display:inline-block;background:${dc.bg};color:${dc.text};font-size:13px;font-weight:500;padding:4px 12px;border-radius:6px;">${status}</span>
-    </div>
-    <div style="padding:24px 28px;">
-      <p style="font-size:14px;color:#1a1a1a;margin:0 0 12px;">Hi ${submitterName || 'there'},</p>
-      <p style="font-size:14px;color:#555;margin:0 0 8px;">Thank you for submitting your project request. After review, your project request has been <strong>${decisionVerb(status)}</strong>.${revisitClause}</p>
-      ${notesBlock}
-      ${status === 'Passed' ? `<p style="font-size:14px;color:#555;margin:8px 0;">If you feel this project should be given a second review, please submit the Project Request Form again and note that you are requesting a re-review of the project within the <strong>Notes / additional context</strong> field.</p>` : ''}
-      <p style="font-size:14px;color:#555;margin:0;">If you have any questions, feel free to reply to this email.</p>
-    </div>
-    <div style="padding:16px 28px;background:#f5f5f3;border-top:1px solid #e5e5e5;">
-      <p style="font-size:12px;color:#aaa;margin:0;">Sent via Arbiter</p>
-    </div>
-  </div></body></html>`;
-  emailjs.send(saved.serviceId, templateId, {
-    to_email: toEmail,
-    to_name: submitterName,
-    name: submitterName,
-    email: toEmail,
-    project_name: p.name,
-    decision: status,
-    notes: notes || 'No additional notes provided.',
-    revisit_date: p.revisitDate || 'N/A',
-    message: decisionMessage,
-  }).then(() => {
-    document.querySelector('.modal-overlay').remove();
-    toast('Decision email sent!');
-  }).catch(err => {
-    console.error(err);
-    toast('Failed to send — check your EmailJS template ID and credentials.');
-  });
 }
 
 function exportCSV() {
@@ -6647,7 +6482,6 @@ function runAutoQA() {
   check('qa-2-4', 'updateProjectStatus function exists', () => typeof updateProjectStatus === 'function');
   check('qa-2-5', 'updateProjectField function exists', () => typeof updateProjectField === 'function');
   check('qa-2-6', 'updateRevisitDate function exists', () => typeof updateRevisitDate === 'function');
-  check('qa-2-8', 'sendDecisionEmail function exists', () => typeof sendDecisionEmail === 'function');
   check('qa-2-10', 'deleteProject function exists', () => typeof deleteProject === 'function');
   check('qa-2-11', 'exportCSV function exists', () => typeof exportCSV === 'function');
   check('qa-2-12', 'showImportModal function exists', () => typeof showImportModal === 'function');

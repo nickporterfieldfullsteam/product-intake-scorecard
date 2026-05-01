@@ -6,7 +6,40 @@ Reps submit through a portal; admins and PMs review, score, decide, and notify b
 Live admin app: <https://nickporterfieldfullsteam.github.io/arbiter/>
 Live rep portal: <https://nickporterfieldfullsteam.github.io/arbiter/portal/>
 
-Currently: main app v1.14.2, portal v0.6.0.
+Currently: main app v1.15.1, portal v0.6.0.
+
+---
+
+## Recent significant changes
+
+A short orienting note for future readers; full history in `git log`.
+
+- **v1.15.x — EmailJS removal arc and Help rewrite.** The exported sales form,
+  manual decision-email modal, and all EmailJS scaffolding were removed (~1500
+  lines net). Anything that used to flow through EmailJS now goes through the
+  notify Edge Function. The portal at `/arbiter/portal/` is the only path for
+  reps to submit. Help section and Take a Tour were rewritten to match the
+  current product; the old text described features that no longer exist.
+
+- **v1.14.x — Notifications and observability.** The notify Edge Function was
+  built; transactional emails fire automatically on new submissions and project
+  status changes (see [Email notifications](#email-notifications)). Audit trail
+  in `sent_notifications` and per-recipient preferences in
+  `workspace_members.notification_prefs` were added in 008/009.
+
+- **v1.13.x — Workspace member management.** Admins/PMs are managed via the
+  Settings tab; migrations 006/007 added the policies and SECURITY DEFINER
+  helpers that the rest of the system now relies on.
+
+Things that still look stale but aren't worth a commit yet:
+
+- The QA checklist in the Help tab still lists items for removed features
+  (EmailJS pre-populated, Send decision email, Export sales form, Import
+  submission). The checklist is an internal testing aid; cleanup is low
+  priority.
+- `salesHelpTopics` data structure and `renderSalesHelpEditor` UI in
+  `index.html` are orphaned by the v1.15 sales-form removal but don't render
+  anywhere. Small cleanup commit when convenient.
 
 ---
 
@@ -317,6 +350,15 @@ time.
   `remote rejected ... refusing to allow a Personal Access Token to create or update
   workflow X without 'workflow' scope`. Fix: regenerate the PAT with `repo` AND
   `workflow` scopes checked.
+
+- **Removing a feature? Grep tests for feature names AND function names.** Playwright
+  tests sometimes assert on user-visible strings (e.g. `toContainText('Sales form')`)
+  rather than function existence. Function-name grep won't find them, and CI fails
+  after push. Real bite during the v1.15 removal of the sales-form export — a
+  `toContainText('Sales form')` sanity assertion in
+  `tests/tests/e2e/phase3-reps-c3.spec.ts` failed because the section it was checking
+  for had just been removed. Pre-flight grep should always include the feature's
+  user-facing strings.
 
 - **`sent_notifications` grows forever.** No automated retention. At current volume
   this is fine but a future cron job's worth of work if it ever matters.

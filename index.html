@@ -1353,15 +1353,6 @@
         </div>
       </div>
 
-      <div class="help-section">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-          <div class="help-audience sales" style="margin-bottom:0;">For Sales &amp; CS reps</div>
-          <button class="btn-secondary" style="font-size:12px;padding:4px 12px;" onclick="addSalesHelpTopic()">+ Add topic</button>
-        </div>
-        <p style="font-size:12px;color:#888;margin-bottom:0.75rem;">These topics appear in the ? help button on the exported sales form. Click a topic to edit it.</p>
-        <div id="sales-help-editor"></div>
-      </div>
-
     </div>
   </div>
 
@@ -1424,7 +1415,7 @@
 </footer>
 
 <script>
-const VERSION = '1.15.2';
+const VERSION = '1.15.3';
 const BUILD_STAMP = '2026-04-30 07:41:40 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
@@ -1574,7 +1565,6 @@ async function persist() {
     tier_thresholds: thresholds,
     project_type_mappings: projectTypeMappings,
     custom_presets: customPresets,
-    sales_help_topics: salesHelpTopics,
     config_version: Math.floor(Date.now() / 1000),
     updated_at: new Date().toISOString()
   }).eq('workspace_id', currentWorkspaceId);
@@ -1593,7 +1583,6 @@ async function loadConfig() {
   if (data.tier_thresholds && Object.keys(data.tier_thresholds).length) thresholds = data.tier_thresholds;
   if (data.project_type_mappings?.length) projectTypeMappings = data.project_type_mappings;
   if (data.custom_presets?.length)        { customPresets = data.custom_presets; PRESETS = [...BUILTIN_PRESETS, ...customPresets]; }
-  if (data.sales_help_topics?.length)     salesHelpTopics = data.sales_help_topics;
 }
 
 async function loadProjects() {
@@ -2112,13 +2101,6 @@ function getActiveCriteria() {
   if (!pt || !pt.activeCriteriaIds || !pt.activeCriteriaIds.length) return criteria;
   return criteria.filter(c => pt.activeCriteriaIds.includes(c.id));
 }
-
-const DEFAULT_SALES_HELP = [
-  { id: 'sh1', title: 'How do I submit a request?', body: 'Your PM will send you a link to the project request form — a simple web page you can open in any browser, no login required. Fill in the project details and answer each question as accurately as you can, then hit Submit. You\'ll see a confirmation screen and the PM will receive your request by email automatically.' },
-  { id: 'sh2', title: 'Tips for a strong submission', body: 'Be specific — the more context you provide, the faster your PM can evaluate the request. Use the description field to explain what the customer is trying to accomplish, not just what they asked for. If there\'s a deadline or renewal date, include it. If multiple accounts have asked for the same thing, mention that too. Each question has a hint below it to help you pick the right answer.' },
-  { id: 'sh3', title: 'What happens after I submit?', body: 'Your request goes to the PM team for review. They\'ll evaluate it against current priorities and get back to you with a decision — typically whether it will be pursued, deferred, or passed on. If they need more information they\'ll reach out directly. You don\'t need to follow up immediately; submissions are tracked and nothing gets lost.' },
-];
-let salesHelpTopics = DEFAULT_SALES_HELP;
 
 function getTier(score) {
   if (score >= thresholds.pursue)  return { label: 'Pursue', cls: 'tier-pursue' };
@@ -5024,7 +5006,7 @@ function moveCriterion(ci, dir) {
 
 /* ── SETTINGS BACKUP ── */
 function exportSettings() {
-  const payload = { version: 3, exportedAt: new Date().toISOString(), criteria, weights, detailFields, thresholds, projectTypeMappings, customPresets, salesHelpTopics };
+  const payload = { version: 3, exportedAt: new Date().toISOString(), criteria, weights, detailFields, thresholds, projectTypeMappings, customPresets };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -5048,7 +5030,6 @@ function importSettings(event) {
       if (payload.thresholds) thresholds = payload.thresholds;
       if (payload.projectTypeMappings) projectTypeMappings = payload.projectTypeMappings;
       if (payload.customPresets) { customPresets = payload.customPresets; persistPresets(); }
-      if (payload.salesHelpTopics) salesHelpTopics = payload.salesHelpTopics;
       persist(); buildDetailFields(); buildCriteriaFields(); renderEditor(); renderDetailEditor(); buildWeightSliders(); buildTierThresholds(); buildProjectTypeMappings(); buildProjectTypeSelect(); buildPresetButtons();
       toast('Settings imported successfully!');
     } catch(err) { toast('Could not read file — make sure it is a valid settings backup.'); }
@@ -5070,10 +5051,10 @@ const customDefaults = null; // legacy localStorage path disabled
   if (!confirm('Reset all settings back to ' + label + '? Saved projects will not be affected.')) return;
   if (customDefaults) {
     const snapshot = JSON.parse(customDefaults);
-    criteria = snapshot.criteria; weights = snapshot.weights || {}; detailFields = snapshot.detailFields || DEFAULT_DETAIL_FIELDS; thresholds = snapshot.thresholds || { pursue: 75, evaluate: 55, defer: 35 }; projectTypeMappings = snapshot.projectTypeMappings || []; customPresets = snapshot.customPresets || []; salesHelpTopics = snapshot.salesHelpTopics || DEFAULT_SALES_HELP; persistPresets();
+    criteria = snapshot.criteria; weights = snapshot.weights || {}; detailFields = snapshot.detailFields || DEFAULT_DETAIL_FIELDS; thresholds = snapshot.thresholds || { pursue: 75, evaluate: 55, defer: 35 }; projectTypeMappings = snapshot.projectTypeMappings || []; customPresets = snapshot.customPresets || []; persistPresets();
   } else {
     criteria = JSON.parse(JSON.stringify(DEFAULT_CRITERIA)).map(c => ({ ...c, id: uid() }));
-    weights = {}; detailFields = JSON.parse(JSON.stringify(DEFAULT_DETAIL_FIELDS)).map(f => ({ ...f, id: uid() })); thresholds = { pursue: 75, evaluate: 55, defer: 35 }; projectTypeMappings = []; customPresets = []; salesHelpTopics = JSON.parse(JSON.stringify(DEFAULT_SALES_HELP)); persistPresets();
+    weights = {}; detailFields = JSON.parse(JSON.stringify(DEFAULT_DETAIL_FIELDS)).map(f => ({ ...f, id: uid() })); thresholds = { pursue: 75, evaluate: 55, defer: 35 }; projectTypeMappings = []; customPresets = []; persistPresets();
   }
   persist(); buildDetailFields(); buildCriteriaFields(); renderEditor(); renderDetailEditor(); buildWeightSliders(); buildTierThresholds(); buildProjectTypeMappings(); buildProjectTypeSelect(); buildPresetButtons();
   toast('Reset to ' + label + '.');
@@ -5612,66 +5593,6 @@ function resetQA() {
   toast('QA checklist reset.');
 }
 
-/* ── SALES HELP EDITOR ── */
-function renderSalesHelpEditor() {
-  const container = document.getElementById('sales-help-editor');
-  if (!container) return;
-  container.innerHTML = '';
-  if (!salesHelpTopics.length) {
-    container.innerHTML = '<p style="font-size:13px;color:#aaa;margin-bottom:0.5rem;">No topics yet. Add one below.</p>';
-    return;
-  }
-  salesHelpTopics.forEach((t, i) => {
-    const card = document.createElement('div');
-    card.className = 'criterion-card';
-    card.style.marginBottom = '8px';
-    card.innerHTML = `
-      <div class="criterion-header" onclick="toggleSalesHelp('${t.id}')">
-        <span class="criterion-header-label" id="shlabel-${t.id}">${t.title}</span>
-        <button class="btn-danger-sm" onclick="event.stopPropagation();removeSalesHelpTopic('${t.id}')">Remove</button>
-        <span class="chevron" id="shchev-${t.id}">▾</span>
-      </div>
-      <div class="criterion-body" id="shbody-${t.id}">
-        <div class="field" style="margin-bottom:10px;">
-          <label style="font-size:13px;">Question / topic title</label>
-          <input type="text" value="${t.title.replace(/"/g,'&quot;')}" oninput="updateSalesHelpTopic('${t.id}','title',this.value)">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label style="font-size:13px;">Answer / body text</label>
-          <textarea style="min-height:80px;" oninput="updateSalesHelpTopic('${t.id}','body',this.value)">${t.body}</textarea>
-        </div>
-      </div>`;
-    container.appendChild(card);
-  });
-}
-
-function toggleSalesHelp(id) {
-  const body = document.getElementById('shbody-' + id);
-  const chev = document.getElementById('shchev-' + id);
-  if (!body) return;
-  const open = body.classList.toggle('open');
-  chev.classList.toggle('open', open);
-}
-
-function updateSalesHelpTopic(id, key, val) {
-  const t = salesHelpTopics.find(x => x.id === id); if (!t) return;
-  t[key] = val; persist();
-  if (key === 'title') { const el = document.getElementById('shlabel-' + id); if (el) el.textContent = val; }
-}
-
-function addSalesHelpTopic() {
-  const t = { id: 'sh' + Date.now(), title: 'New topic', body: '' };
-  salesHelpTopics.push(t); persist();
-  renderSalesHelpEditor();
-  setTimeout(() => toggleSalesHelp(t.id), 50);
-}
-
-function removeSalesHelpTopic(id) {
-  if (!confirm('Remove this topic?')) return;
-  salesHelpTopics = salesHelpTopics.filter(t => t.id !== id); persist();
-  renderSalesHelpEditor();
-}
-
 /* ── TABS ── */
 function showTab(tab) {
   // Remove back bar if present
@@ -5696,7 +5617,7 @@ function showTab(tab) {
   if (tab === 'submitters') { renderSubmitters(); }
   if (tab === 'weights') { buildPresetButtons(); buildWeightSliders(); buildTierThresholds(); buildProjectTypeMappings(); }
   if (tab === 'editor') { renderEditor(); renderDetailEditor(); }
-  if (tab === 'help') { renderSalesHelpEditor(); setTimeout(loadQA, 50); }
+  if (tab === 'help') { setTimeout(loadQA, 50); }
   if (tab === 'settings') {
     const emailEl = document.getElementById('settings-user-email');
     if (emailEl) emailEl.textContent = currentUser?.email || '';

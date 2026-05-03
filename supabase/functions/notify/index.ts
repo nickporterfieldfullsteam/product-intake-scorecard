@@ -2,12 +2,15 @@
 //
 // Transactional email notifications for Arbiter.
 //
-// Two event types:
+// Three event types:
 //   - new_submission: a rep submitted a new project. Email all workspace
 //     members so any admin/PM knows there's something new to review.
 //   - project_updated: a PM saved changes to a project. Email the rep
 //     who originally submitted it so they know there's a decision or
 //     status change.
+//   - member_invited: an admin invited someone to the workspace.
+//     Email the invitee with a sign-in link. The acceptance is automatic
+//     on first sign-in via the trigger added in migration 011.
 //
 // Lookups use the service-role key to bypass RLS. The function itself
 // is gated by Supabase Edge's default JWT-required setting — only
@@ -18,6 +21,9 @@
 //     can insert, they can notify about that insert.
 //   - For project_updated, the caller is the workspace member who just
 //     saved a draft. RLS already verified UPDATE permission.
+//   - For member_invited, the caller is the workspace admin who just
+//     created the invitations row. RLS on workspace_invitations
+//     (migration 011) already verified is_workspace_admin.
 //
 // Failures are logged in the response but don't fail the request.
 // Partial success is still success.
@@ -37,7 +43,8 @@ const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 // ── Types ──
 type EventBody =
   | { event_type: "new_submission"; project_id: string }
-  | { event_type: "project_updated"; project_id: string; changes: string[] };
+  | { event_type: "project_updated"; project_id: string; changes: string[] }
+  | { event_type: "member_invited"; invitation_id: string };
 
 type SendResult = { email: string; ok: boolean; error?: string };
 
@@ -426,6 +433,64 @@ function emailProjectUpdated(
   return { subject, html };
 }
 
+function emailMemberInvited(opts: {
+  workspaceName: string;
+  role: string;
+}): { subject: string; html: string } {
+  const workspaceName = escapeHtml(opts.workspaceName);
+  const role = escapeHtml(opts.role);
+
+  // Friendly role label for the email body. The DB stores 'admin' / 'pm' /
+  // 'viewer'; readers shouldn't see 'pm' as an opaque acronym.
+  const roleLabel = (() => {
+    switch ((opts.role || "").toLowerCase()) {
+      case "admin":  return "Admin";
+      case "pm":     return "PM";
+      case "viewer": return "Viewer";
+      default:       return role;
+    }
+  })();
+
+  const subject = `You're invited to ${opts.workspaceName} on Arbiter`;
+
+  // Hero: workspace name + role pill (light treatment, matches the
+  // new_submission hero style).
+  const heroHtml = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px;">
+      <tr>
+        <td style="padding:14px 18px; background:#fafaf9; border-radius:8px;">
+          <div style="font-size:11px; font-weight:500; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">Workspace invitation</div>
+          <div style="font-size:20px; font-weight:600; color:#1a1a1a; margin-bottom:10px;">${workspaceName}</div>
+          <span style="display:inline-block; background:#dde7f3; color:#1e3a5f; font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; padding:4px 10px; border-radius:6px;">${escapeHtml(roleLabel)}</span>
+        </td>
+      </tr>
+    </table>`;
+
+  // Body copy — short and practical. Two facts the recipient needs:
+  // (a) what they're being invited to, (b) how acceptance works.
+  const explanationHtml = `
+    <p style="font-size:14px; line-height:1.55; color:#444; margin:0 0 12px;">
+      You've been invited to join <strong>${workspaceName}</strong> on Arbiter as a ${escapeHtml(roleLabel)}.
+      Sign in with this email address to accept — your membership is added automatically.
+    </p>
+    <p style="font-size:13px; line-height:1.55; color:#666; margin:0 0 4px;">
+      If you weren't expecting this invitation, you can safely ignore the email. No account is created until you sign in.
+    </p>`;
+
+  const bodyHtml = heroHtml + explanationHtml;
+
+  const html = emailShell({
+    heading: "You're invited to Arbiter",
+    intro: "An admin added you to a workspace. Sign in with this email to accept.",
+    bodyHtml,
+    ctaText: "Sign in to Arbiter",
+    ctaUrl: APP_URL,
+    footer: "You're receiving this because someone invited this email address to an Arbiter workspace.",
+  });
+
+  return { subject, html };
+}
+
 // ── Recipient lookups ──
 type WorkspaceMemberInfo = {
   email: string;
@@ -513,30 +578,33 @@ Deno.serve(async (req) => {
     });
   }
 
-  if (!body.project_id || !body.event_type) {
+  if (!body.event_type) {
     return new Response(
-      JSON.stringify({ error: "Missing project_id or event_type" }),
+      JSON.stringify({ error: "Missing event_type" }),
       { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
     );
   }
 
-  // Look up the project (full row — service-role bypasses RLS)
-  const { data: project, error: pErr } = await sb
-    .from("projects")
-    .select("*")
-    .eq("id", body.project_id)
-    .maybeSingle();
-  if (pErr || !project) {
-    return new Response(
-      JSON.stringify({ error: pErr?.message || "Project not found" }),
-      { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
-    );
-  }
-
+  // Per-event validation. The required fields differ by event type, so
+  // we validate inside each branch rather than gating everything on a
+  // shared identifier upfront.
   let results: SendResult[] = [];
   let skipped = 0;
 
   if (body.event_type === "new_submission") {
+    // Look up the project (full row — service-role bypasses RLS)
+    const { data: project, error: pErr } = await sb
+      .from("projects")
+      .select("*")
+      .eq("id", body.project_id)
+      .maybeSingle();
+    if (pErr || !project) {
+      return new Response(
+        JSON.stringify({ error: pErr?.message || "Project not found" }),
+        { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      );
+    }
+
     // Fetch workspace_config in parallel for detail/criteria labels
     const [members, configResult] = await Promise.all([
       getWorkspaceMembers(project.workspace_id),
@@ -594,6 +662,19 @@ Deno.serve(async (req) => {
       ),
     ]);
   } else if (body.event_type === "project_updated") {
+    // Look up the project (full row — service-role bypasses RLS)
+    const { data: project, error: pErr } = await sb
+      .from("projects")
+      .select("*")
+      .eq("id", body.project_id)
+      .maybeSingle();
+    if (pErr || !project) {
+      return new Response(
+        JSON.stringify({ error: pErr?.message || "Project not found" }),
+        { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      );
+    }
+
     if (!project.submitter_email) {
       return new Response(
         JSON.stringify({ sent: 0, skipped: "no submitter_email on project" }),
@@ -618,6 +699,58 @@ Deno.serve(async (req) => {
       status: results[0].ok ? "sent" : "failed",
       error: results[0].error,
       changes,
+    });
+  } else if (body.event_type === "member_invited") {
+    // Look up the invitation (service-role bypasses the workspace_invitations
+    // RLS policies, which only let the workspace's admins SELECT).
+    const { data: invitation, error: invErr } = await sb
+      .from("workspace_invitations")
+      .select("id, workspace_id, email, role, accepted_at")
+      .eq("id", body.invitation_id)
+      .maybeSingle();
+    if (invErr || !invitation) {
+      return new Response(
+        JSON.stringify({ error: invErr?.message || "Invitation not found" }),
+        { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      );
+    }
+    // Don't email already-accepted invitations. The admin UI shouldn't
+    // allow this in practice — a resend on an accepted invitation makes
+    // no sense — but we guard regardless.
+    if (invitation.accepted_at) {
+      return new Response(
+        JSON.stringify({ sent: 0, skipped: "invitation already accepted" }),
+        { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Look up the workspace name for the email subject and body.
+    const { data: workspace, error: wErr } = await sb
+      .from("workspaces")
+      .select("name")
+      .eq("id", invitation.workspace_id)
+      .maybeSingle();
+    if (wErr || !workspace) {
+      return new Response(
+        JSON.stringify({ error: wErr?.message || "Workspace not found" }),
+        { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      );
+    }
+
+    const { subject, html } = emailMemberInvited({
+      workspaceName: workspace.name || "Arbiter",
+      role: invitation.role,
+    });
+    results = [await sendEmail(invitation.email, subject, html)];
+    // Audit. project_id is null here (no project context for an invite);
+    // the column is nullable per migration 008's schema.
+    await recordAttempt({
+      workspaceId: invitation.workspace_id,
+      projectId: null,
+      eventType: "member_invited",
+      recipientEmail: invitation.email,
+      status: results[0].ok ? "sent" : "failed",
+      error: results[0].error,
     });
   } else {
     return new Response(

@@ -1,5 +1,6 @@
 import { test, expect } from '../helpers/fixtures';
 import { openSettingsTab } from '../helpers/auth';
+import { cleanTestInvitations, getPendingInvitationByEmail } from '../helpers/supabase';
 import { createClient } from '@supabase/supabase-js';
 
 /**
@@ -109,19 +110,64 @@ test.describe('Workspace member management (v1.13.0)', () => {
     expect(networkCallFired).toBe(false);
   });
 
-  test('Add member: non-existent email shows "no account exists" error', async ({ authedPage }) => {
+  test('Add member: non-existent email creates a pending invitation (v1.16.0)', async ({ authedPage }) => {
+    // Pre-clean any leftover invitations from previous runs.
+    await cleanTestInvitations();
+
+    // Mock the notify Edge Function so we don't fire a real email per
+    // test run. The UI's success path needs a 2xx response with the
+    // standard shape; everything else (DB insert, render) is the real
+    // production code path.
+    let notifyCalls = 0;
+    let notifyBody: any = null;
+    await authedPage.route('**/functions/v1/notify', async (route) => {
+      notifyCalls++;
+      notifyBody = JSON.parse(route.request().postData() || '{}');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sent: 1, failed: 0, skipped: 0,
+          results: [{ email: notifyBody.email || 'mocked', ok: true }],
+        }),
+      });
+    });
+
     await openSettingsTab(authedPage);
     await expect.poll(async () => await authedPage.locator('#wm-list .wm-row').count())
       .toBeGreaterThan(0);
 
-    // Use a clearly-fake email that won't exist in auth.users
-    await authedPage.locator('#wm-add-email').fill('definitely-not-a-real-user-12345@test.invalid');
+    const inviteEmail = 'invitee-' + Date.now() + '@test.invalid';
+    await authedPage.locator('#wm-add-email').fill(inviteEmail);
     await authedPage.locator('#wm-add-role').selectOption('pm');
     await authedPage.getByRole('button', { name: 'Add member' }).click();
 
-    const err = authedPage.locator('#wm-add-error');
-    await expect(err).toBeVisible();
-    await expect(err).toContainText(/no account exists/i);
+    // Wait for the toast confirming the send. The error element should
+    // stay hidden — this isn't an error path anymore.
+    await expect(authedPage.locator('.toast', { hasText: /invitation sent/i })).toBeVisible();
+    await expect(authedPage.locator('#wm-add-error')).toBeHidden();
+
+    // The DB should have a row in workspace_invitations.
+    const inv = await getPendingInvitationByEmail(inviteEmail);
+    expect(inv).not.toBeNull();
+    expect(inv!.email).toBe(inviteEmail);
+    expect(inv!.role).toBe('pm');
+    expect(inv!.accepted_at).toBeNull();
+
+    // The notify Edge Function should have been called exactly once,
+    // with the new invitation's id.
+    expect(notifyCalls).toBe(1);
+    expect(notifyBody.event_type).toBe('member_invited');
+    expect(notifyBody.invitation_id).toBe(inv!.id);
+
+    // The Pending invitations section should now show this invitation.
+    const pendingSection = authedPage.locator('#wm-pending');
+    await expect(pendingSection).toContainText(inviteEmail);
+    await expect(pendingSection).toContainText(/PM/);
+    await expect(pendingSection).toContainText(/pending sign-in/i);
+
+    // Cleanup
+    await cleanTestInvitations();
   });
 
   test('Add member: existing member email shows "already a member" error', async ({ authedPage }) => {
@@ -137,5 +183,110 @@ test.describe('Workspace member management (v1.13.0)', () => {
     const err = authedPage.locator('#wm-add-error');
     await expect(err).toBeVisible();
     await expect(err).toContainText(/already a member/i);
+  });
+});
+
+/**
+ * Pending-invite flow tests (v1.16.0).
+ *
+ * Background: when an admin tries to add a member by an email that
+ * doesn't have an auth account yet, the UI now creates a row in
+ * workspace_invitations and fires a member_invited notify event
+ * instead of dead-ending. The invitation is auto-accepted by the
+ * trigger from migration 011 the first time the invitee signs up.
+ *
+ * The notify Edge Function is mocked in these tests — we only care
+ * that it's called with the right body, not that it actually sends
+ * email. (Real-email coverage lives in notify-edge-function.spec.ts.)
+ *
+ * Out of scope: the auto-accept trigger itself. Testing it requires
+ * creating a fresh auth user via the Admin API and signing them in,
+ * which the current fixture set doesn't support cleanly. Manual
+ * verification covers it for now.
+ */
+test.describe('Pending-invite flow (v1.16.0)', () => {
+  test.beforeEach(async () => {
+    // Each test in this block starts with no pending invitations.
+    // cleanTestWorkspace from the fixture wipes projects but not
+    // invitations, so we wipe invites here too.
+    await cleanTestInvitations();
+  });
+
+  test('Re-invite same email shows "already sent" error pointing at Resend', async ({ authedPage }) => {
+    // Mock notify so the first add succeeds without firing real email.
+    await authedPage.route('**/functions/v1/notify', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ sent: 1, failed: 0, skipped: 0, results: [] }),
+      });
+    });
+
+    await openSettingsTab(authedPage);
+    await expect.poll(async () => await authedPage.locator('#wm-list .wm-row').count())
+      .toBeGreaterThan(0);
+
+    const inviteEmail = 'reinvite-' + Date.now() + '@test.invalid';
+
+    // First add — creates the invitation
+    await authedPage.locator('#wm-add-email').fill(inviteEmail);
+    await authedPage.locator('#wm-add-role').selectOption('pm');
+    await authedPage.getByRole('button', { name: 'Add member' }).click();
+    await expect(authedPage.locator('.toast', { hasText: /invitation sent/i })).toBeVisible();
+
+    // Wait for the pending row to render before retrying. Otherwise the
+    // second click can race the first invitation's load.
+    await expect(authedPage.locator('#wm-pending')).toContainText(inviteEmail);
+
+    // Second add of the same email — should hit the find_pending_invitation
+    // RPC guard and show the "already sent" error.
+    await authedPage.locator('#wm-add-email').fill(inviteEmail);
+    await authedPage.getByRole('button', { name: 'Add member' }).click();
+
+    const err = authedPage.locator('#wm-add-error');
+    await expect(err).toBeVisible();
+    await expect(err).toContainText(/already been sent/i);
+    await expect(err).toContainText(/resend/i);
+
+    await cleanTestInvitations();
+  });
+
+  test('Cancel pending invitation deletes the row and re-renders the list', async ({ authedPage }) => {
+    await authedPage.route('**/functions/v1/notify', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ sent: 1, failed: 0, skipped: 0, results: [] }),
+      });
+    });
+
+    await openSettingsTab(authedPage);
+    await expect.poll(async () => await authedPage.locator('#wm-list .wm-row').count())
+      .toBeGreaterThan(0);
+
+    const inviteEmail = 'cancel-' + Date.now() + '@test.invalid';
+
+    // Send the invite
+    await authedPage.locator('#wm-add-email').fill(inviteEmail);
+    await authedPage.locator('#wm-add-role').selectOption('pm');
+    await authedPage.getByRole('button', { name: 'Add member' }).click();
+    await expect(authedPage.locator('.toast', { hasText: /invitation sent/i })).toBeVisible();
+    await expect(authedPage.locator('#wm-pending')).toContainText(inviteEmail);
+
+    // Confirm the row exists in DB
+    const before = await getPendingInvitationByEmail(inviteEmail);
+    expect(before).not.toBeNull();
+
+    // Click Cancel → enters confirm state → click Confirm
+    const pendingRow = authedPage.locator('#wm-pending .wm-row').filter({ hasText: inviteEmail });
+    await pendingRow.getByRole('button', { name: 'Cancel' }).click();
+    await pendingRow.getByRole('button', { name: 'Confirm' }).click();
+
+    await expect(authedPage.locator('.toast', { hasText: /invitation canceled/i })).toBeVisible();
+
+    // Row should be gone from the DOM and from the DB
+    await expect(authedPage.locator('#wm-pending')).not.toContainText(inviteEmail);
+    const after = await getPendingInvitationByEmail(inviteEmail);
+    expect(after).toBeNull();
   });
 });

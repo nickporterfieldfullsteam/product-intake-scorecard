@@ -242,3 +242,50 @@ export async function getRepByEmail(email: string): Promise<any | null> {
   if (error) throw error;
   return data;
 }
+
+/* ============================================================
+ * WORKSPACE INVITATIONS HELPERS — added in v1.16.0 to support
+ * pending-invite flow tests. workspace_invitations rows are
+ * created by addWorkspaceMember when the invitee has no auth
+ * account; they should be wiped between tests.
+ * ============================================================ */
+
+/**
+ * Hard-delete all invitations in the test workspace. RLS gates
+ * DELETE on is_workspace_admin, which the test admin user is, so
+ * this works under the standard authedClient session.
+ */
+export async function cleanTestInvitations(): Promise<void> {
+  const workspaceId = process.env.TEST_WORKSPACE_ID;
+  if (!workspaceId) throw new Error('TEST_WORKSPACE_ID must be set in .env.test');
+  const c = await authedClient();
+  const { error } = await c.from('workspace_invitations').delete().eq('workspace_id', workspaceId);
+  if (error) throw new Error('cleanTestInvitations failed: ' + error.message);
+}
+
+/** Count pending invitations in the test workspace. */
+export async function countPendingInvitations(): Promise<number> {
+  const workspaceId = process.env.TEST_WORKSPACE_ID;
+  if (!workspaceId) throw new Error('TEST_WORKSPACE_ID must be set in .env.test');
+  const c = await authedClient();
+  const { count, error } = await c.from('workspace_invitations')
+    .select('*', { count: 'exact', head: true })
+    .eq('workspace_id', workspaceId)
+    .is('accepted_at', null);
+  if (error) throw error;
+  return count || 0;
+}
+
+/** Fetch a pending invitation by email from the test workspace. */
+export async function getPendingInvitationByEmail(email: string): Promise<any | null> {
+  const workspaceId = process.env.TEST_WORKSPACE_ID;
+  const c = await authedClient();
+  const { data, error } = await c.from('workspace_invitations')
+    .select('*')
+    .eq('workspace_id', workspaceId!)
+    .eq('email', email.toLowerCase())
+    .is('accepted_at', null)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}

@@ -619,9 +619,10 @@
       <div id="wm-list" style="margin-bottom:1.25rem;">
         <p style="font-size:13px;color:#888;font-style:italic;">Loading…</p>
       </div>
+      <div id="wm-pending" style="margin-bottom:1.25rem;"></div>
       <div style="border-top:1px solid #f0f0ee;padding-top:1rem;">
         <p style="font-size:12px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Add a member</p>
-        <p style="font-size:12px;color:#888;margin-bottom:10px;">The user must already have a confirmed account.</p>
+        <p style="font-size:12px;color:#888;margin-bottom:10px;">If they already have an account they're added immediately. Otherwise we email an invitation; they're added automatically the first time they sign in.</p>
         <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
           <input type="email" id="wm-add-email" placeholder="user@example.com" style="flex:1;min-width:220px;font-size:13px;padding:7px 10px;">
           <select id="wm-add-role" style="font-size:13px;padding:7px 10px;">
@@ -1415,7 +1416,7 @@
 </footer>
 
 <script>
-const VERSION = '1.15.3';
+const VERSION = '1.16.0';
 const BUILD_STAMP = '2026-04-30 07:41:40 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
@@ -1672,27 +1673,43 @@ async function loadReps() {
  * Adding a member: find_user_id_by_email RPC, then INSERT.
  */
 let workspaceMembers = [];
+let pendingInvitations = [];
 let pendingMemberRemoval = null; // member id awaiting confirmation
+let pendingInvitationCancel = null; // invitation id awaiting confirmation
 
 async function loadWorkspaceMembers() {
   if (!currentWorkspaceId) return;
-  // Run both queries in parallel — they're independent
-  const [memRes, emailRes] = await Promise.all([
+  // Run all three queries in parallel — they're independent.
+  // The pending invitations SELECT is gated by the RLS policies from
+  // migration 011 (admins only); for non-admins it returns an empty
+  // array, which renders as no pending section.
+  const [memRes, emailRes, invRes] = await Promise.all([
     _sb.from('workspace_members')
       .select('id, user_id, role, joined_at, notification_prefs')
       .eq('workspace_id', currentWorkspaceId)
       .order('joined_at', { ascending: true }),
     _sb.rpc('list_workspace_member_emails', { p_workspace_id: currentWorkspaceId }),
+    _sb.from('workspace_invitations')
+      .select('id, email, role, invited_at, accepted_at')
+      .eq('workspace_id', currentWorkspaceId)
+      .is('accepted_at', null)
+      .order('invited_at', { ascending: true }),
   ]);
   if (memRes.error) {
     console.warn('[Arbiter] Failed to load workspace_members:', memRes.error);
     workspaceMembers = [];
+    pendingInvitations = [];
     renderWorkspaceMembers();
+    renderPendingInvitations();
     return;
   }
   if (emailRes.error) {
     console.warn('[Arbiter] Failed to load member emails:', emailRes.error);
     // Continue without emails — show '(unknown email)' rather than failing entirely
+  }
+  if (invRes.error) {
+    console.warn('[Arbiter] Failed to load workspace_invitations:', invRes.error);
+    // Non-fatal: render the rest, leave the pending list empty.
   }
   // Merge: build a user_id → email map, then attach to each member row
   const emailMap = new Map();
@@ -1705,7 +1722,14 @@ async function loadWorkspaceMembers() {
     email: emailMap.get(m.user_id) || '(unknown email)',
     notificationPrefs: m.notification_prefs || {},
   }));
+  pendingInvitations = (invRes.data || []).map(i => ({
+    id: i.id,
+    email: i.email,
+    role: i.role,
+    invitedAt: i.invited_at,
+  }));
   renderWorkspaceMembers();
+  renderPendingInvitations();
 }
 
 function renderWorkspaceMembers() {
@@ -1759,6 +1783,88 @@ function renderWorkspaceMembers() {
   }).join('');
 }
 
+/**
+ * Render the "Pending invitations" list — invites that have been sent
+ * but not yet accepted (the invitee hasn't signed up). Hidden entirely
+ * if there are zero pending invites; the section header only appears
+ * when there's something to show, to avoid empty-state noise.
+ */
+function renderPendingInvitations() {
+  const container = document.getElementById('wm-pending');
+  if (!container) return;
+  if (!pendingInvitations.length) {
+    container.innerHTML = '';
+    return;
+  }
+  const rows = pendingInvitations.map(inv => {
+    const sentRel = formatRelativeDate(inv.invitedAt);
+    const isPendingCancel = pendingInvitationCancel === inv.id;
+    const roleLabel = inv.role === 'admin' ? 'Admin'
+                    : inv.role === 'pm' ? 'PM'
+                    : inv.role === 'viewer' ? 'Viewer'
+                    : escapeHtml(inv.role);
+    return `
+      <div class="wm-row" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #f0f0ee;border-radius:8px;margin-bottom:6px;background:#fafaf9;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${escapeHtml(inv.email)}
+            <span style="font-size:11px;color:#888;font-weight:400;margin-left:6px;">(${roleLabel})</span>
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:2px;">Invited ${sentRel} — pending sign-in</div>
+        </div>
+        <button class="btn-secondary" style="font-size:12px;padding:5px 10px;" onclick="resendInvitation('${inv.id}')">Resend</button>
+        ${isPendingCancel
+          ? `<button class="btn-danger-inline" style="font-size:12px;" onclick="confirmCancelInvitation('${inv.id}')">Confirm</button>
+             <button class="btn-secondary" style="font-size:12px;padding:5px 10px;" onclick="cancelCancelInvitation()">Keep</button>`
+          : `<button class="btn-danger-inline" style="font-size:12px;" onclick="requestCancelInvitation('${inv.id}')">Cancel</button>`
+        }
+      </div>`;
+  }).join('');
+  container.innerHTML = `
+    <p style="font-size:12px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Pending invitations</p>
+    ${rows}`;
+}
+
+/** Stage an invitation cancel — flips the row into a confirm/keep state. */
+function requestCancelInvitation(invitationId) {
+  pendingInvitationCancel = invitationId;
+  renderPendingInvitations();
+}
+
+function cancelCancelInvitation() {
+  pendingInvitationCancel = null;
+  renderPendingInvitations();
+}
+
+async function confirmCancelInvitation(invitationId) {
+  pendingInvitationCancel = null;
+  const { error } = await _sb.from('workspace_invitations')
+    .delete()
+    .eq('id', invitationId);
+  if (error) {
+    toast('Failed to cancel invitation: ' + error.message);
+    await loadWorkspaceMembers();
+    return;
+  }
+  toast('Invitation canceled.');
+  await loadWorkspaceMembers();
+}
+
+/**
+ * Resend an existing pending invitation. Doesn't touch the DB — just
+ * re-fires the notify event so a new email goes out. The invitation
+ * row stays as-is (same id, same invited_at).
+ */
+async function resendInvitation(invitationId) {
+  try {
+    await notifyEvent('member_invited', { invitation_id: invitationId });
+    toast('Invitation re-sent.');
+  } catch (err) {
+    console.warn('[Arbiter] resend invitation failed:', err);
+    toast('Failed to re-send invitation.');
+  }
+}
+
 /** Format a date as a relative string ("3 days ago", "yesterday", etc). */
 function formatRelativeDate(iso) {
   if (!iso) return 'unknown';
@@ -1796,8 +1902,61 @@ async function addWorkspaceMember() {
     return;
   }
   if (!userId) {
-    errorEl.textContent = 'No account exists with that email. Ask them to sign up first.';
-    errorEl.style.display = 'block';
+    // No account exists for this email yet. Create a pending invitation
+    // (RLS gates this on is_workspace_admin), then fire a member_invited
+    // notify event to send the email. The invitation auto-accepts the
+    // first time the invitee signs up — see migration 011's trigger.
+    //
+    // Guard: if there's already a pending invitation for this email,
+    // don't create a duplicate. The DB has UNIQUE (workspace_id, email)
+    // so the INSERT would fail; surface a clearer message instead.
+    const { data: existingInvId, error: pendErr } = await _sb.rpc(
+      'find_pending_invitation_by_email',
+      { p_workspace_id: currentWorkspaceId, p_email: email }
+    );
+    if (pendErr) {
+      errorEl.textContent = 'Failed to check existing invitations: ' + pendErr.message;
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (existingInvId) {
+      errorEl.textContent = 'An invitation has already been sent to this email. Use Resend below if you want to re-send it.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    // Insert the invitation. invited_by is set to the current user's id
+    // (audit trail). RLS verifies is_workspace_admin.
+    const { data: insertedInv, error: invInsErr } = await _sb
+      .from('workspace_invitations')
+      .insert({
+        workspace_id: currentWorkspaceId,
+        email,
+        role,
+        invited_by: currentUser?.id || null,
+      })
+      .select('id')
+      .single();
+    if (invInsErr) {
+      errorEl.textContent = 'Failed to create invitation: ' + invInsErr.message;
+      errorEl.style.display = 'block';
+      return;
+    }
+    // Fire the email. If it fails, the invitation row still exists and
+    // can be re-sent from the pending list — don't roll back.
+    try {
+      await notifyEvent('member_invited', { invitation_id: insertedInv.id });
+    } catch (err) {
+      console.warn('[Arbiter] invitation email failed:', err);
+      toast('Invitation created but email failed — try Resend.');
+      emailInput.value = '';
+      roleSelect.value = 'pm';
+      await loadWorkspaceMembers();
+      return;
+    }
+    emailInput.value = '';
+    roleSelect.value = 'pm';
+    toast('Invitation sent.');
+    await loadWorkspaceMembers();
     return;
   }
   // Check they're not already a member (avoids a unique-constraint error)
@@ -2036,12 +2195,19 @@ async function sbUpdateProjectField(id, dbField, value) {
  * Fire a transactional email notification via the notify Edge Function.
  * Always fire-and-forget at the call site.
  *
- * Used by saveDraft to notify reps of project_updated. The portal also
- * has its own copy for new_submission. Both call sites must use the
- * current user's session token, which Supabase handles for us via the
- * authed _sb client (it stores the access token internally).
+ * Used by saveDraft to notify reps of project_updated, by the portal for
+ * new_submission (separate copy of this helper there), and by the
+ * Workspace Members section for member_invited. All call sites must use
+ * the current user's session token, which Supabase handles for us via
+ * the authed _sb client (it stores the access token internally).
+ *
+ * The body shape varies by event type:
+ *   - new_submission:    { event_type, project_id }
+ *   - project_updated:   { event_type, project_id, changes: [...] }
+ *   - member_invited:    { event_type, invitation_id }
+ * Pass whatever extra fields the event needs in `bodyFields`.
  */
-async function notifyEvent(eventType, projectId, extra = {}) {
+async function notifyEvent(eventType, bodyFields = {}) {
   const sess = (await _sb.auth.getSession()).data.session;
   if (!sess?.access_token) return;
   const resp = await fetch(SUPABASE_URL + '/functions/v1/notify', {
@@ -2051,7 +2217,7 @@ async function notifyEvent(eventType, projectId, extra = {}) {
       Authorization: 'Bearer ' + sess.access_token,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ event_type: eventType, project_id: projectId, ...extra }),
+    body: JSON.stringify({ event_type: eventType, ...bodyFields }),
   });
   if (!resp.ok) {
     throw new Error('notify failed: ' + resp.status + ' ' + await resp.text());
@@ -4266,7 +4432,7 @@ async function saveDraft(projectId) {
     const repEmail = (p.lockedVals?.__email__ || '').toLowerCase();
     const myEmail = (currentUser?.email || '').toLowerCase();
     if (repEmail && repEmail !== myEmail) {
-      notifyEvent('project_updated', projectId, { changes: changed }).catch(err => {
+      notifyEvent('project_updated', { project_id: projectId, changes: changed }).catch(err => {
         console.warn('[Arbiter] notify failed (non-blocking):', err);
       });
     }

@@ -408,7 +408,8 @@
   </div>
 
   <div class="tabs" id="main-tabs">
-    <button class="tab" onclick="showTab('tracker')" id="tab-btn-tracker">Dashboard</button>
+    <button class="tab" onclick="showTab('tracker')" id="tab-btn-tracker">Intake</button>
+    <button class="tab" onclick="showTab('active-projects')" id="tab-btn-active-projects">Active Projects</button>
     <button class="tab" onclick="showTab('submitters')" id="tab-btn-submitters">Reps</button>
     <button class="tab" onclick="showTab('insights')" id="tab-btn-insights">Insights</button>
     <button class="tab" onclick="showTab('help')" id="tab-btn-help">Help</button>
@@ -507,6 +508,31 @@
     </div>
     <div class="btn-row" style="margin-top:0.5rem">
       <button class="btn-secondary" onclick="exportCSV()">Export as CSV</button>
+    </div>
+  </div>
+
+  <!-- ACTIVE PROJECTS -->
+  <div id="tab-active-projects" class="tab-panel">
+    <div id="ap-summary-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem;"></div>
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;gap:8px;flex-wrap:wrap;">
+        <span class="section-title" style="margin-bottom:0;">Active projects</span>
+      </div>
+      <!-- Search -->
+      <div style="position:relative;margin-bottom:0.75rem;">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:13px;color:#bbb;pointer-events:none;">&#x2315;</span>
+        <input type="text" id="ap-search" placeholder="Search projects or customers…" style="width:100%;font-size:12px;padding:5px 10px 5px 26px;border:1px solid #e5e5e5;border-radius:8px;font-family:inherit;" oninput="renderActiveProjects()">
+      </div>
+      <!-- Filters -->
+      <div id="ap-filter-bar" style="display:flex;align-items:center;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">
+        <select id="ap-filter-platform" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All platforms</option></select>
+        <select id="ap-filter-lifecycle" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All lifecycle</option></select>
+        <select id="ap-filter-status" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All statuses</option></select>
+        <select id="ap-filter-owner" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All owners</option></select>
+        <button style="font-family:inherit;font-size:11px;padding:2px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#aaa;cursor:pointer;" onclick="clearActiveProjectsFilters()">&#x2715;</button>
+      </div>
+      <!-- List -->
+      <div id="ap-list"></div>
     </div>
   </div>
 
@@ -676,6 +702,84 @@
         <button id="btn-generate-samples" class="btn-secondary" onclick="generateSampleProjects()">Generate sample projects</button>
         <button id="btn-clear-samples" class="btn-danger-inline" style="padding:6px 14px;border:1px solid #FCEBEB;border-radius:8px;margin-left:8px;" onclick="clearSampleProjects()">Clear sample projects</button>
       </div>
+    </div>
+
+    <div class="section" id="settings-execution-config">
+      <div class="section-title">Active projects configuration</div>
+      <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Manage the dropdown options available when tracking accepted projects. Drag to reorder. Renaming a value updates all projects using it automatically. Deleting a value in use will prompt you to reassign existing projects first.</p>
+
+      <!-- Sponsor Groups -->
+      <div style="margin-bottom:1.5rem;">
+        <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Sponsor groups</p>
+        <div id="exec-list-sponsor-groups" style="margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="exec-new-sponsor-group" placeholder="Add sponsor group…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_sponsor_groups','exec-new-sponsor-group')">Add</button>
+        </div>
+      </div>
+
+      <!-- Platforms -->
+      <div style="margin-bottom:1.5rem;">
+        <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Platforms</p>
+        <div id="exec-list-platforms" style="margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="exec-new-platform" placeholder="Add platform…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_platforms','exec-new-platform')">Add</button>
+        </div>
+      </div>
+
+      <!-- Priorities -->
+      <div style="margin-bottom:1.5rem;">
+        <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Priority levels</p>
+        <div id="exec-list-priorities" style="margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="exec-new-priority" placeholder="Add priority level…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_priorities','exec-new-priority')">Add</button>
+        </div>
+      </div>
+
+      <!-- Lifecycle Stages -->
+      <div style="margin-bottom:1.5rem;">
+        <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Lifecycle stages</p>
+        <p style="font-size:12px;color:#aaa;margin-bottom:8px;">Order matters — stages run sequentially from top to bottom.</p>
+        <div id="exec-list-lifecycle-stages" style="margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="exec-new-lifecycle-stage" placeholder="Add lifecycle stage…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_lifecycle_stages','exec-new-lifecycle-stage')">Add</button>
+        </div>
+      </div>
+
+      <!-- Execution Statuses -->
+      <div style="margin-bottom:1.5rem;">
+        <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Execution statuses</p>
+        <div id="exec-list-statuses" style="margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="exec-new-status" placeholder="Add status…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_statuses','exec-new-status')">Add</button>
+        </div>
+      </div>
+
+      <!-- People Directory -->
+      <div>
+        <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">People directory</p>
+        <p style="font-size:12px;color:#aaa;margin-bottom:8px;">Names available when assigning owners to projects. These people don't need an Arbiter account.</p>
+        <div id="exec-list-people" style="margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="exec-new-person" placeholder="Add person…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_people','exec-new-person')">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="settings-status-board">
+      <div class="section-title">Shareable status board</div>
+      <p style="font-size:13px;color:#888;margin-bottom:1rem;">A public read-only view of your active projects — no login required, no scoring data shown. Share the link with stakeholders who need visibility.</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+        <input type="text" id="status-board-url" readonly style="flex:1;min-width:220px;font-size:12px;padding:6px 10px;background:#f5f5f3;color:#555;border-color:#e5e5e5;">
+        <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="copyStatusBoardUrl()">Copy link</button>
+      </div>
+      <button class="btn-danger-inline" style="font-size:13px;padding:6px 14px;border:1px solid #FCEBEB;border-radius:8px;" onclick="regenerateStatusBoardToken()">Regenerate token</button>
+      <p style="font-size:12px;color:#aaa;margin-top:8px;">Regenerating the token invalidates the old link immediately. Anyone with the previous link will lose access.</p>
     </div>
 
     <div class="section">
@@ -5170,6 +5274,345 @@ function moveCriterion(ci, dir) {
   persist(); renderEditor(); buildCriteriaFields();
 }
 
+/* ── EXECUTION CONFIG ── */
+
+// Column name → DOM list container ID mapping
+const EXEC_LIST_MAP = {
+  execution_sponsor_groups:   'exec-list-sponsor-groups',
+  execution_platforms:        'exec-list-platforms',
+  execution_priorities:       'exec-list-priorities',
+  execution_lifecycle_stages: 'exec-list-lifecycle-stages',
+  execution_statuses:         'exec-list-statuses',
+  execution_people:           'exec-list-people',
+};
+
+// Project field that corresponds to each config list column
+const EXEC_PROJECT_COL = {
+  execution_sponsor_groups:   'execution_sponsor_group',
+  execution_platforms:        'execution_platform',
+  execution_priorities:       'execution_priority',
+  execution_lifecycle_stages: 'execution_lifecycle',
+  execution_statuses:         'execution_status',
+  execution_people:           null, // owners handled separately (array)
+};
+
+let execConfig = {}; // local cache keyed by column name
+
+async function loadExecutionConfig() {
+  if (!currentWorkspaceId) return;
+  const { data, error } = await _sb.from('workspace_config')
+    .select('execution_sponsor_groups,execution_platforms,execution_priorities,execution_lifecycle_stages,execution_statuses,execution_people,status_board_token')
+    .eq('workspace_id', currentWorkspaceId)
+    .single();
+  if (error || !data) { console.error('[exec config] load error', error); return; }
+  Object.keys(EXEC_LIST_MAP).forEach(col => { execConfig[col] = data[col] ?? []; });
+  execConfig['status_board_token'] = data['status_board_token'] ?? '';
+  renderExecLists();
+  renderStatusBoardUrl();
+}
+
+function renderExecLists() {
+  Object.entries(EXEC_LIST_MAP).forEach(([col, containerId]) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const items = execConfig[col] || [];
+    if (!items.length) {
+      container.innerHTML = '<p style="font-size:13px;color:#bbb;font-style:italic;">No items yet.</p>';
+      return;
+    }
+    container.innerHTML = items.map((item, idx) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f5f3;">
+        <span style="color:#ccc;font-size:14px;user-select:none;">⠿</span>
+        <span class="exec-item-label" style="flex:1;font-size:13px;" ondblclick="startExecRename(this,'${col}',${idx})">${escapeHtml(item)}</span>
+        <button onclick="startExecRename(this.previousElementSibling,'${col}',${idx})" style="font-family:inherit;font-size:11px;padding:2px 8px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;cursor:pointer;">Rename</button>
+        <button onclick="deleteExecListItem('${col}',${idx})" style="font-family:inherit;font-size:11px;padding:2px 8px;border:1px solid #FCEBEB;border-radius:6px;background:#fff;color:#a32d2d;cursor:pointer;">Delete</button>
+      </div>
+    `).join('');
+  });
+}
+
+function startExecRename(labelEl, col, idx) {
+  const current = execConfig[col][idx];
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.style.cssText = 'flex:1;font-size:13px;padding:2px 6px;border:1px solid #888;border-radius:6px;';
+  const finish = async () => {
+    const newVal = input.value.trim();
+    if (!newVal || newVal === current) { renderExecLists(); return; }
+    await renameExecListItem(col, idx, newVal);
+  };
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { input.blur(); } if (e.key === 'Escape') { renderExecLists(); } });
+  labelEl.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+async function renameExecListItem(col, idx, newVal) {
+  const oldVal = execConfig[col][idx];
+  const newList = [...execConfig[col]];
+  newList[idx] = newVal;
+  const projectCol = EXEC_PROJECT_COL[col];
+
+  // Bulk-update projects using old value
+  if (projectCol) {
+    const { data: affected } = await _sb.from('projects')
+      .select('id')
+      .eq('workspace_id', currentWorkspaceId)
+      .eq(projectCol, oldVal);
+    if (affected?.length) {
+      await _sb.from('projects').update({ [projectCol]: newVal })
+        .eq('workspace_id', currentWorkspaceId).eq(projectCol, oldVal);
+    }
+  }
+  // People list: update execution_owners arrays
+  if (col === 'execution_people') {
+    const { data: affected } = await _sb.from('projects')
+      .select('id,execution_owners')
+      .eq('workspace_id', currentWorkspaceId)
+      .contains('execution_owners', [oldVal]);
+    if (affected?.length) {
+      for (const p of affected) {
+        const newOwners = (p.execution_owners || []).map(o => o === oldVal ? newVal : o);
+        await _sb.from('projects').update({ execution_owners: newOwners }).eq('id', p.id);
+      }
+    }
+  }
+
+  // Update in-memory projects array too
+  if (projectCol) {
+    projects.forEach(p => { if (p[projectCol] === oldVal) p[projectCol] = newVal; });
+  }
+  if (col === 'execution_people') {
+    projects.forEach(p => {
+      if (Array.isArray(p.execution_owners) && p.execution_owners.includes(oldVal))
+        p.execution_owners = p.execution_owners.map(o => o === oldVal ? newVal : o);
+    });
+  }
+
+  await saveExecList(col, newList);
+  toast(`Renamed "${oldVal}" → "${newVal}"`);
+}
+
+async function addExecListItem(col, inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) return;
+  if ((execConfig[col] || []).includes(val)) { toast('Already in the list.'); return; }
+  const newList = [...(execConfig[col] || []), val];
+  await saveExecList(col, newList);
+  input.value = '';
+  toast('Added.');
+}
+
+async function deleteExecListItem(col, idx) {
+  const val = execConfig[col][idx];
+  const projectCol = EXEC_PROJECT_COL[col];
+  let inUseCount = 0;
+
+  if (projectCol) {
+    const { count } = await _sb.from('projects').select('id', { count: 'exact', head: true })
+      .eq('workspace_id', currentWorkspaceId).eq(projectCol, val);
+    inUseCount = count || 0;
+  } else if (col === 'execution_people') {
+    const { count } = await _sb.from('projects').select('id', { count: 'exact', head: true })
+      .eq('workspace_id', currentWorkspaceId).contains('execution_owners', [val]);
+    inUseCount = count || 0;
+  }
+
+  if (inUseCount > 0) {
+    const remaining = (execConfig[col] || []).filter((_, i) => i !== idx);
+    if (!remaining.length) {
+      alert(`"${val}" is used by ${inUseCount} project(s). Add another value first before deleting this one.`);
+      return;
+    }
+    const choice = prompt(
+      `"${val}" is used by ${inUseCount} project(s).\n\nReassign them to:\n${remaining.map((r,i) => `${i+1}. ${r}`).join('\n')}\n\nType the number:`
+    );
+    if (!choice) return;
+    const choiceIdx = parseInt(choice, 10) - 1;
+    if (isNaN(choiceIdx) || choiceIdx < 0 || choiceIdx >= remaining.length) { toast('Invalid choice. Delete cancelled.'); return; }
+    const newVal = remaining[choiceIdx];
+
+    if (projectCol) {
+      await _sb.from('projects').update({ [projectCol]: newVal })
+        .eq('workspace_id', currentWorkspaceId).eq(projectCol, val);
+      projects.forEach(p => { if (p[projectCol] === val) p[projectCol] = newVal; });
+    } else {
+      const { data: affected } = await _sb.from('projects')
+        .select('id,execution_owners').eq('workspace_id', currentWorkspaceId)
+        .contains('execution_owners', [val]);
+      if (affected?.length) {
+        for (const p of affected) {
+          const newOwners = (p.execution_owners || []).map(o => o === val ? newVal : o);
+          await _sb.from('projects').update({ execution_owners: newOwners }).eq('id', p.id);
+        }
+        projects.forEach(p => {
+          if (Array.isArray(p.execution_owners) && p.execution_owners.includes(val))
+            p.execution_owners = p.execution_owners.map(o => o === val ? newVal : o);
+        });
+      }
+    }
+    toast(`Reassigned ${inUseCount} project(s) to "${newVal}".`);
+  }
+
+  const newList = (execConfig[col] || []).filter((_, i) => i !== idx);
+  await saveExecList(col, newList);
+  toast(`Deleted "${val}".`);
+}
+
+async function saveExecList(col, newList) {
+  execConfig[col] = newList;
+  await _sb.from('workspace_config').update({ [col]: newList }).eq('workspace_id', currentWorkspaceId);
+  renderExecLists();
+}
+
+// Status board token
+function renderStatusBoardUrl() {
+  const input = document.getElementById('status-board-url');
+  if (!input) return;
+  const token = execConfig['status_board_token'] || '';
+  const base = window.location.origin + '/arbiter/status/';
+  input.value = token ? `${base}?token=${token}` : '(no token yet — click Regenerate to create one)';
+}
+
+async function copyStatusBoardUrl() {
+  const input = document.getElementById('status-board-url');
+  if (!input || !input.value.startsWith('http')) { toast('Generate a token first.'); return; }
+  await navigator.clipboard.writeText(input.value);
+  toast('Link copied!');
+}
+
+async function regenerateStatusBoardToken() {
+  if (!confirm('Regenerating the token will invalidate the current link immediately. Anyone with the old link will lose access. Continue?')) return;
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2,'0')).join('');
+  execConfig['status_board_token'] = token;
+  await _sb.from('workspace_config').update({ status_board_token: token }).eq('workspace_id', currentWorkspaceId);
+  renderStatusBoardUrl();
+  toast('Token regenerated. Share the new link.');
+}
+
+/* ── ACTIVE PROJECTS ── */
+
+function getActiveProjects() {
+  return (projects || []).filter(p => p.status === 'Accepted' && !p.deleted_at);
+}
+
+function renderActiveProjects() {
+  populateActiveProjectFilters();
+  const list = document.getElementById('ap-list');
+  if (!list) return;
+  const search = (document.getElementById('ap-search')?.value || '').toLowerCase();
+  const fPlatform  = document.getElementById('ap-filter-platform')?.value || '';
+  const fLifecycle = document.getElementById('ap-filter-lifecycle')?.value || '';
+  const fStatus    = document.getElementById('ap-filter-status')?.value || '';
+  const fOwner     = document.getElementById('ap-filter-owner')?.value || '';
+
+  let items = getActiveProjects().filter(p => {
+    if (search && !((p.name||'').toLowerCase().includes(search) || (p.locked_vals?.customer||'').toLowerCase().includes(search))) return false;
+    if (fPlatform  && p.execution_platform  !== fPlatform)  return false;
+    if (fLifecycle && p.execution_lifecycle !== fLifecycle) return false;
+    if (fStatus    && p.execution_status    !== fStatus)    return false;
+    if (fOwner     && !(p.execution_owners||[]).includes(fOwner)) return false;
+    return true;
+  });
+
+  if (!items.length) {
+    list.innerHTML = '<p style="font-size:13px;color:#aaa;font-style:italic;padding:1rem 0;">No active projects match the current filters.</p>';
+    return;
+  }
+
+  const statusColors = {
+    'On Track':   { bg:'#E1F5EE', color:'#0F6E56' },
+    'At Risk':    { bg:'#FAEEDA', color:'#854F0B' },
+    'Blocked':    { bg:'#FCEBEB', color:'#A32D2D' },
+    'On Hold':    { bg:'#F1EFE8', color:'#5F5E5A' },
+    'Needs Info': { bg:'#E6F1FB', color:'#185FA5' },
+    'Not Started':{ bg:'#F1EFE8', color:'#5F5E5A' },
+  };
+  const lifecycleColors = {
+    'Planning':   { bg:'#E6F1FB', color:'#185FA5' },
+    'Development':{ bg:'#EEEDFE', color:'#534AB7' },
+    'Testing':    { bg:'#FAEEDA', color:'#854F0B' },
+    'Releasing':  { bg:'#EAF3DE', color:'#3B6D11' },
+  };
+  const priorityColors = {
+    'Normal':           { bg:'#F1EFE8', color:'#5F5E5A' },
+    'High — 30 days':   { bg:'#FAECE7', color:'#993C1D' },
+    'Critical — ASAP':  { bg:'#FCEBEB', color:'#A32D2D' },
+  };
+
+  function pill(val, map) {
+    if (!val) return '<span style="color:#bbb;font-size:12px;">—</span>';
+    const c = map[val] || { bg:'#F1EFE8', color:'#5F5E5A' };
+    return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px;background:${c.bg};color:${c.color};white-space:nowrap;">${escapeHtml(val)}</span>`;
+  }
+
+  function ownerAvatars(owners) {
+    if (!owners?.length) return '<span style="color:#bbb;font-size:12px;">—</span>';
+    const colors = ['#EEEDFE|#534AB7','#E1F5EE|#0F6E56','#FAECE7|#993C1D','#E6F1FB|#185FA5'];
+    return owners.slice(0,3).map((o, i) => {
+      const [bg, col] = colors[i % colors.length].split('|');
+      const initials = o.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      return `<span title="${escapeHtml(o)}" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${bg};color:${col};font-size:9px;font-weight:500;margin-right:2px;">${initials}</span>`;
+    }).join('') + (owners.length > 3 ? `<span style="font-size:11px;color:#aaa;">+${owners.length-3}</span>` : '');
+  }
+
+  list.innerHTML = items.map(p => {
+    const customer = p.locked_vals?.customer || '';
+    const rep = p.locked_vals?.submitter_name || '';
+    const date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'}) : '';
+    const eta = p.execution_eta ? new Date(p.execution_eta + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3;cursor:pointer;" onclick="toggleProjectDetail('${p.id}')">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name||'Untitled')}</div>
+          <div style="font-size:11px;color:#aaa;margin-top:2px;">${escapeHtml(customer)}${rep ? ' · '+escapeHtml(rep) : ''} · ${date}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+          <div style="width:90px;font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.execution_platform||'')}</div>
+          <div style="width:80px;">${pill(p.execution_priority, priorityColors)}</div>
+          <div style="width:90px;">${pill(p.execution_lifecycle, lifecycleColors)}</div>
+          <div style="width:88px;">${pill(p.execution_status, statusColors)}</div>
+          <div style="width:52px;font-size:11px;color:#aaa;text-align:right;">${eta}</div>
+          <div style="width:72px;text-align:right;">${ownerAvatars(p.execution_owners)}</div>
+          <div style="color:#ccc;font-size:16px;">›</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function populateActiveProjectFilters() {
+  const platforms  = [...new Set(getActiveProjects().map(p=>p.execution_platform).filter(Boolean))];
+  const lifecycles = execConfig['execution_lifecycle_stages'] || [];
+  const statuses   = execConfig['execution_statuses'] || [];
+  const people     = execConfig['execution_people'] || [];
+
+  function repopulate(id, values) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    const label = id.replace('ap-filter-','').replace(/-/g,' ');
+    el.innerHTML = `<option value="">All ${label}</option>` +
+      values.map(v=>`<option value="${escapeHtml(v)}"${cur===v?' selected':''}>${escapeHtml(v)}</option>`).join('');
+  }
+  repopulate('ap-filter-platform',  platforms);
+  repopulate('ap-filter-lifecycle', lifecycles);
+  repopulate('ap-filter-status',    statuses);
+  repopulate('ap-filter-owner',     people);
+}
+
+function clearActiveProjectsFilters() {
+  ['ap-search','ap-filter-platform','ap-filter-lifecycle','ap-filter-status','ap-filter-owner'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  renderActiveProjects();
+}
+
 /* ── SETTINGS BACKUP ── */
 function exportSettings() {
   const payload = { version: 3, exportedAt: new Date().toISOString(), criteria, weights, detailFields, thresholds, projectTypeMappings, customPresets };
@@ -5764,21 +6207,23 @@ function showTab(tab) {
   // Remove back bar if present
   const bb = document.getElementById('config-back-bar');
   if (bb) bb.remove();
-  ['intake','tracker','submitters','insights','weights','editor','help','settings'].forEach(t => {
+  ['intake','tracker','active-projects','submitters','insights','weights','editor','help','settings'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.toggle('active', t === tab);
   });
   // Only highlight tabs that are in the main nav
-  const navTabs = ['tracker','submitters','insights','help'];
+  const navTabs = ['tracker','active-projects','submitters','insights','help'];
   const navTabEls = document.querySelectorAll('#main-tabs .tab');
   navTabEls.forEach((el, i) => {
     if (el) el.classList.toggle('active', navTabs[i] === tab);
   });
-  // Show FAB on dashboard, hide on intake
+  // Show FAB on intake tabs, hide on intake form
   const fab = document.getElementById('new-request-fab');
-  if (fab) fab.style.display = ['tracker','submitters','insights','help'].includes(tab) ? 'flex' : 'none';
-  else setTimeout(() => { const f = document.getElementById('new-request-fab'); if (f) f.style.display = ['tracker','submitters','insights','help'].includes(tab) ? 'flex' : 'none'; }, 100);
+  const fabTabs = ['tracker','active-projects','submitters','insights','help'];
+  if (fab) fab.style.display = fabTabs.includes(tab) ? 'flex' : 'none';
+  else setTimeout(() => { const f = document.getElementById('new-request-fab'); if (f) f.style.display = fabTabs.includes(tab) ? 'flex' : 'none'; }, 100);
   if (tab === 'tracker') { renderTracker(); }
+  if (tab === 'active-projects') { renderActiveProjects(); }
   if (tab === 'insights') { populateInsightsFilters(); renderInsights(); }
   if (tab === 'submitters') { renderSubmitters(); }
   if (tab === 'weights') { buildPresetButtons(); buildWeightSliders(); buildTierThresholds(); buildProjectTypeMappings(); }
@@ -5789,6 +6234,7 @@ function showTab(tab) {
     if (emailEl) emailEl.textContent = currentUser?.email || '';
     loadWorkspaceMembers();
     loadRecentNotifications();
+    loadExecutionConfig();
   }
 }
 
@@ -6047,7 +6493,7 @@ function showConfigTab(tab) {
   const bar = document.createElement('div');
   bar.id = 'config-back-bar';
   bar.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:1rem;';
-  bar.innerHTML = '<button onclick="document.getElementById(\'config-back-bar\').remove();showTab(\'tracker\')" style="font-family:inherit;font-size:13px;padding:5px 12px;border:1px solid #e5e5e5;border-radius:8px;background:#fff;cursor:pointer;color:#555;">← Back to Dashboard</button>';
+  bar.innerHTML = '<button onclick="document.getElementById(\'config-back-bar\').remove();showTab(\'tracker\')" style="font-family:inherit;font-size:13px;padding:5px 12px;border:1px solid #e5e5e5;border-radius:8px;background:#fff;cursor:pointer;color:#555;">← Back to Intake</button>';
   const appEl = document.querySelector('.app');
   if (appEl) appEl.insertBefore(bar, appEl.children[2]);
 }
@@ -6067,7 +6513,7 @@ function showNewRequest() {
   const bar = document.createElement('div');
   bar.id = 'config-back-bar';
   bar.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:1rem;';
-  bar.innerHTML = '<button onclick="document.getElementById(\'config-back-bar\').remove();showTab(\'tracker\')" style="font-family:inherit;font-size:13px;padding:5px 12px;border:1px solid #e5e5e5;border-radius:8px;background:#fff;cursor:pointer;color:#555;">← Back to Dashboard</button>';
+  bar.innerHTML = '<button onclick="document.getElementById(\'config-back-bar\').remove();showTab(\'tracker\')" style="font-family:inherit;font-size:13px;padding:5px 12px;border:1px solid #e5e5e5;border-radius:8px;background:#fff;cursor:pointer;color:#555;">← Back to Intake</button>';
   const appEl = document.querySelector('.app');
   if (appEl) appEl.insertBefore(bar, appEl.children[2]);
   window.scrollTo(0, 0);

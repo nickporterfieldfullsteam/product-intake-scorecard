@@ -411,6 +411,12 @@ time.
 
 ## Roadmap (not commitments, just things on the list)
 
+The v1.17.x arc (execution tracking) is the current active planning effort — see
+[Planned: v1.17.x — Execution tracking arc](#planned-v117x--execution-tracking-arc)
+below for the full spec.
+
+Longer-horizon items, not yet scheduled:
+
 * Workspace switching / multi-workspace UI
 * Real role differences between admin and PM (currently identical)
 * Audit log retention policy (`sent_notifications` rows accumulate forever today)
@@ -419,6 +425,8 @@ time.
   forever today; pending rows live until canceled or accepted)
 * Inviter name in `member_invited` email body (currently says "An admin invited
   you" — could resolve `invited_by` via Auth Admin API to "Nick invited you")
+* Insights / reporting tab (stakeholder and leadership reporting — parked until
+  requirements are gathered from stakeholders)
 
 ---
 
@@ -431,3 +439,241 @@ time.
 
 No bundler, no linter config in repo. The HTML files are edited directly,
 the Edge Function uses Deno's TypeScript-as-source model.
+
+---
+
+## Planned: v1.17.x — Execution tracking arc
+
+This section is the authoritative spec for the execution tracking feature set,
+designed across a planning session on May 4, 2026. It exists so future sessions
+(and future readers) can pick up mid-arc without re-litigating decisions already made.
+
+### Problem statement
+
+Arbiter handles intake well — reps submit, PMs score, decisions get made. But once
+a project is accepted it falls into a black hole. The team has been maintaining a
+manual Confluence board to track accepted projects through execution. That board has
+no connection to Arbiter's data, requires manual updates, and will be replaced by
+this feature set.
+
+### Product decisions (already made — don't re-litigate these)
+
+* **Arbiter becomes the system of record end-to-end**, from submission through
+  delivery. The Confluence board is retired.
+* **Owners are not Arbiter users.** They're a PM-managed people directory — names
+  only, no auth, no login. Stored as a JSONB array in `workspace_config`. A developer
+  assigned to a project doesn't need to touch Arbiter; the PM manages ownership.
+* **All six execution config lists are fully manageable from Settings**, not
+  hardcoded. This includes rename, delete-with-reassignment, and reorder.
+  Delete behavior: if any projects use the value being deleted, show a reassignment
+  prompt ("X projects use this value — reassign to:") before deleting. Rename
+  behavior: bulk-updates all projects using the old value automatically.
+* **The shareable status board is a separate page** at `/arbiter/status/`, not
+  embedded in the main app nav. It requires no login — access is controlled by a
+  random token in the URL (`?token=...`), stored in `workspace_config` and
+  regeneratable by admins from Settings. It shows no scoring data whatsoever —
+  only execution fields. This is the same "no scores for non-PM eyes" principle
+  already enforced in the portal and email templates.
+* **Insights/Reporting is parked.** The tab exists today but its purpose is being
+  redefined as stakeholder/leadership reporting. Requirements haven't been gathered
+  yet. Don't touch it in this arc.
+
+### Nav restructure
+
+Current nav: Dashboard · Reps · Insights · Help
+
+New nav: Dashboard · Intake · Active Projects · Insights · Reps · Help
+
+| Tab | Audience | Purpose |
+| --- | --- | --- |
+| Dashboard | PM only | Operational attention view — blocked projects, at-risk, unreviewed submissions, overdue ETAs, upcoming revisit dates |
+| Intake | PM only | What Dashboard is today — scored submission list, filter tabs, review workflow |
+| Active Projects | PM only | Accepted projects in execution — platform, lifecycle, status, priority, ETA, owners |
+| Insights | Stakeholders / leadership | Parked — aggregate reporting, requirements TBD |
+| Reps | PM / admin | Unchanged |
+| Help | All | Unchanged |
+
+The existing Dashboard tab is renamed to Intake. The existing Dashboard becomes a
+new purpose-built PM operations view. Nothing about the Intake workflow changes —
+it's a rename and move, not a rebuild.
+
+### New execution fields
+
+Six new fields on accepted projects, all editable from the Active Projects detail
+view. These fields are meaningless / hidden on non-accepted projects.
+
+| Field | Type | Source |
+| --- | --- | --- |
+| Sponsor group | text | Dropdown from `workspace_config.execution_sponsor_groups` |
+| Platform | text | Dropdown from `workspace_config.execution_platforms` |
+| Priority | text | Dropdown from `workspace_config.execution_priorities` |
+| ETA | date | Date picker |
+| Lifecycle | text | Dropdown from `workspace_config.execution_lifecycle_stages` |
+| Execution status | text | Dropdown from `workspace_config.execution_statuses` |
+| Owners | text[] | Multi-select from `workspace_config.execution_people` |
+
+Note: `execution_status` is distinct from the existing intake `status` column
+(Submitted / Under Review / Accepted / etc.). They coexist on the `projects` row.
+The naming must be unambiguous in both the DB schema and the JS that touches it.
+
+Default values for each config list (pre-seeded in migration 013):
+
+* Sponsor groups: Product, Support, Sales, Alliance, Technology, Infrastructure
+* Platforms: none — workspace-specific, PM adds their own
+* Priority: Normal, High — 30 days, Critical — ASAP
+* Lifecycle stages: Planning, Development, Testing, Releasing
+* Execution statuses: Not Started, Needs Info, On Hold, On Track, At Risk, Blocked
+* People: none — PM adds their own
+
+### New workspace_config keys
+
+All six lists plus the status board token live in `workspace_config.config` JSONB:
+
+```
+execution_sponsor_groups   text[]   ordered list
+execution_platforms        text[]   ordered list
+execution_priorities       text[]   ordered list
+execution_lifecycle_stages text[]   ordered list, sequential
+execution_statuses         text[]   ordered list
+execution_people           text[]   ordered list
+status_board_token         text     random unguessable string, generated on first use
+```
+
+### Database migrations needed
+
+**Migration 013** — new columns on `projects`, new keys in `workspace_config`:
+
+New nullable columns on `projects`:
+* `execution_sponsor_group` text
+* `execution_platform` text
+* `execution_priority` text
+* `execution_eta` date
+* `execution_lifecycle` text
+* `execution_status` text
+* `execution_owners` text[]
+
+New JSONB keys seeded into `workspace_config.config` for the active workspace:
+the six lists above with their defaults, plus `status_board_token` as empty string
+(generated on first admin visit to the Settings section).
+
+**Before writing migration 013**, verify the current `projects` schema and
+`workspace_config` structure by running:
+
+```sql
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'projects'
+ORDER BY ordinal_position;
+```
+
+```sql
+SELECT key
+FROM workspace_config,
+     jsonb_object_keys(config) AS key
+LIMIT 50;
+```
+
+Paste results before writing any migration SQL. The `execution_eta` name avoids
+collision with any existing `eta` or `revisit_date` column — confirm this.
+
+### Settings tab additions
+
+New section: **Active Projects configuration**. Six subsections, one per list.
+Each subsection shows the current ordered list with:
+* Add new value (text input + button)
+* Rename inline (click to edit in place)
+* Delete (with reassignment prompt if in use, immediate if not)
+* Drag to reorder (affects dropdown order everywhere)
+
+Plus a **Shareable board** subsection:
+* Displays the current shareable URL (masked token, copy button)
+* Regenerate token button (with confirmation — "Anyone with the old link will
+  lose access")
+
+### Shareable status board (`/arbiter/status/`)
+
+Standalone HTML page, no auth required. Token in URL query param validated
+client-side against `workspace_config` via an anon-role Supabase query.
+
+Shows accepted projects only, grouped or sorted by lifecycle stage. Each card
+displays: project name, sponsor group, platform, priority, execution status, ETA,
+owners. No score, no tier, no criteria breakdown, no decision notes.
+
+Design: clean stakeholder-facing aesthetic, distinct from the PM UI. Matches the
+spirit of the portal's simplicity.
+
+If token is missing or invalid: shows a simple "This link is invalid or has
+expired" message. No information about what Arbiter is or what the workspace contains.
+
+### Build sequence
+
+Work in this order. Each step is independently deployable.
+
+1. **Schema verification** — run the two SQL queries above, confirm column names,
+   confirm no collision with existing fields. No code yet.
+2. **Migration 013** — new `projects` columns + seed new `workspace_config` keys.
+   Apply to Supabase before any JS changes.
+3. **Settings — Active Projects config UI** — six manageable lists + token
+   management. No Active Projects page yet; this seeds the data the page will read.
+4. **Active Projects page** — new tab in nav, list view of accepted projects with
+   execution columns, filter/sort. Click-through to project detail.
+5. **Project detail — Execution tab** — new tab alongside Intake on the detail
+   view. Execution fields editable here, saved via PATCH to `projects`.
+6. **Nav restructure** — rename Dashboard → Intake, add Active Projects tab,
+   reorder nav. Update Help tab QA checklist to reflect new nav.
+7. **New Dashboard** — PM operations view. Blocked/at-risk widgets, unreviewed
+   queue, overdue ETAs, upcoming revisit dates.
+8. **Shareable status board** — `/arbiter/status/` standalone page.
+9. **Tests** — new Playwright specs covering: execution field CRUD, config list
+   management (add/rename/delete/reassign), token generation, status board
+   rendering and token validation.
+
+### What the Active Projects view looks like
+
+The view toggle (currently List / Board) becomes a three-way toggle:
+List / Board / Execution — or alternatively, Active Projects is its own top-level
+tab with its own list that only shows accepted projects and only shows execution
+columns. The second approach (separate tab) was chosen because it gives the PM a
+clean mental model: Intake = review queue, Active Projects = delivery pipeline.
+
+The Active Projects list shows: project name + customer + rep + date (left),
+platform + priority pill + lifecycle pill + execution status pill + ETA + owner
+avatars (right). Filters: platform, lifecycle, execution status, owner. No score,
+no tier visible in this view.
+
+### What the new Dashboard looks like
+
+Attention-focused. Two zones:
+
+**Needs action** (top): blocked projects, at-risk projects, submissions not yet
+reviewed, overdue ETAs. Each is a scannable list with a direct link to the
+relevant project or submission.
+
+**Summary metrics** (below): total active projects, breakdown by lifecycle stage,
+breakdown by execution status. Intake metrics (acceptance rate, avg score, this
+month count) move here from the old Dashboard position.
+
+### RLS notes for new features
+
+Execution fields on `projects` inherit the existing projects RLS policies —
+workspace members can read/write, reps cannot see execution data. No new policies
+needed for the fields themselves.
+
+The status board token lookup needs to work for anonymous users. The
+`workspace_config` table's anon SELECT policy must allow reading the
+`status_board_token` key — or preferably, a narrow SECURITY DEFINER RPC
+`get_status_board_token(p_token text) returns boolean` that validates the token
+without exposing other config. Confirm the existing anon policy on
+`workspace_config` before writing the status board auth logic.
+
+### Open questions (resolve before or during build)
+
+* Does `projects` already have an `eta` or `revisit_date` column that could
+  collide with `execution_eta`? Verify via schema query.
+* What is the existing anon-role policy on `workspace_config`? Needed for
+  status board token validation design.
+* Should completed projects (intake status = Completed) appear in Active Projects,
+  or only while in-flight? Likely filter them out, but confirm with PM.
+* Should the shareable board show a "last updated" timestamp? Useful for
+  stakeholders to know they're seeing current data.

@@ -525,10 +525,10 @@
       </div>
       <!-- Filters -->
       <div id="ap-filter-bar" style="display:flex;align-items:center;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">
-        <select id="ap-filter-platform" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All platforms</option></select>
-        <select id="ap-filter-lifecycle" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All lifecycle</option></select>
-        <select id="ap-filter-status" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All statuses</option></select>
-        <select id="ap-filter-owner" style="font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All owners</option></select>
+        <select id="ap-filter-platform" style="width:auto;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All platforms</option></select>
+        <select id="ap-filter-lifecycle" style="width:auto;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All lifecycle</option></select>
+        <select id="ap-filter-status" style="width:auto;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All statuses</option></select>
+        <select id="ap-filter-owner" style="width:auto;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All owners</option></select>
         <button style="font-family:inherit;font-size:11px;padding:2px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#aaa;cursor:pointer;" onclick="clearActiveProjectsFilters()">&#x2715;</button>
       </div>
       <!-- List -->
@@ -1529,7 +1529,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-04 07:18:00 PM EST';
+const BUILD_STAMP = '2026-05-04 07:30:00 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);

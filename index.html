@@ -704,7 +704,23 @@
       </div>
     </div>
 
-    <div class="section" id="settings-execution-config">
+    <div class="section">
+      <div class="section-title">Account</div>
+      <p style="font-size:13px;color:#888;margin-bottom:1rem;">Signed in as <strong id="settings-user-email" style="color:#1a1a1a;"></strong></p>
+      <button id="btn-signout" class="btn-secondary" onclick="signOut()" style="font-size:13px;">Sign out</button>
+    </div>
+
+    <div class="section" style="border-color:#FCEBEB;">
+      <div class="section-title" style="color:#a32d2d;">Danger zone</div>
+      <p style="font-size:13px;color:#888;margin-bottom:1rem;">Permanently delete all saved projects from this device. This cannot be undone. Export a backup first if you need to keep the data.</p>
+      <button class="btn-danger-inline" style="padding:8px 16px;border:1px solid #FCEBEB;border-radius:8px;" onclick="clearAllProjects()">Clear all saved projects</button>
+    </div>
+
+  </div>
+
+  <!-- ACTIVE PROJECTS CONFIG -->
+  <div id="tab-exec-config" class="tab-panel">
+    <div class="section">
       <div class="section-title">Active projects configuration</div>
       <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Manage the dropdown options available when tracking accepted projects. Drag to reorder. Renaming a value updates all projects using it automatically. Deleting a value in use will prompt you to reassign existing projects first.</p>
 
@@ -771,7 +787,7 @@
       </div>
     </div>
 
-    <div class="section" id="settings-status-board">
+    <div class="section">
       <div class="section-title">Shareable status board</div>
       <p style="font-size:13px;color:#888;margin-bottom:1rem;">A public read-only view of your active projects — no login required, no scoring data shown. Share the link with stakeholders who need visibility.</p>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
@@ -781,19 +797,6 @@
       <button class="btn-danger-inline" style="font-size:13px;padding:6px 14px;border:1px solid #FCEBEB;border-radius:8px;" onclick="regenerateStatusBoardToken()">Regenerate token</button>
       <p style="font-size:12px;color:#aaa;margin-top:8px;">Regenerating the token invalidates the old link immediately. Anyone with the previous link will lose access.</p>
     </div>
-
-    <div class="section">
-      <div class="section-title">Account</div>
-      <p style="font-size:13px;color:#888;margin-bottom:1rem;">Signed in as <strong id="settings-user-email" style="color:#1a1a1a;"></strong></p>
-      <button id="btn-signout" class="btn-secondary" onclick="signOut()" style="font-size:13px;">Sign out</button>
-    </div>
-
-    <div class="section" style="border-color:#FCEBEB;">
-      <div class="section-title" style="color:#a32d2d;">Danger zone</div>
-      <p style="font-size:13px;color:#888;margin-bottom:1rem;">Permanently delete all saved projects from this device. This cannot be undone. Export a backup first if you need to keep the data.</p>
-      <button class="btn-danger-inline" style="padding:8px 16px;border:1px solid #FCEBEB;border-radius:8px;" onclick="clearAllProjects()">Clear all saved projects</button>
-    </div>
-
   </div>
 
   <!-- HELP -->
@@ -1499,6 +1502,11 @@
     <button onclick="closeConfigDrawer();showConfigTab('settings')" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 1.25rem;border:none;background:none;font-family:inherit;font-size:14px;color:#1a1a1a;cursor:pointer;text-align:left;" onmouseover="this.style.background='#fafaf9'" onmouseout="this.style.background='none'">
       <span style="font-size:16px;">&#x2699;</span>
       <div><div style="font-weight:500;">Settings</div><div style="font-size:12px;color:#888;">Workspace members, notifications, backups</div></div>
+    </button>
+    <div style="border-top:1px solid #f0f0ee;margin:4px 1.25rem;"></div>
+    <button onclick="closeConfigDrawer();showConfigTab('exec-config')" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 1.25rem;border:none;background:none;font-family:inherit;font-size:14px;color:#1a1a1a;cursor:pointer;text-align:left;" onmouseover="this.style.background='#fafaf9'" onmouseout="this.style.background='none'">
+      <span style="font-size:16px;">&#x2630;</span>
+      <div><div style="font-weight:500;">Active Projects config</div><div style="font-size:12px;color:#888;">Sponsor groups, platforms, lifecycle, owners</div></div>
     </button>
   </div>
 </div>
@@ -6207,7 +6215,7 @@ function showTab(tab) {
   // Remove back bar if present
   const bb = document.getElementById('config-back-bar');
   if (bb) bb.remove();
-  ['intake','tracker','active-projects','submitters','insights','weights','editor','help','settings'].forEach(t => {
+  ['intake','tracker','active-projects','submitters','insights','weights','editor','help','settings','exec-config'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.toggle('active', t === tab);
   });
@@ -6234,7 +6242,6 @@ function showTab(tab) {
     if (emailEl) emailEl.textContent = currentUser?.email || '';
     loadWorkspaceMembers();
     loadRecentNotifications();
-    loadExecutionConfig();
   }
 }
 
@@ -6243,6 +6250,7 @@ async function init() {
     await loadConfig();
     await loadProjects();
     await loadReps();
+    await loadExecutionConfig();
   } catch(e) {
     console.error('[Arbiter] Init load error:', e);
   }
@@ -6470,7 +6478,7 @@ function closeConfigDrawer() {
 function showConfigTab(tab) {
   // Show the config panel as a full-page overlay
   // Hide all main tab panels
-  ['intake','tracker','submitters','insights','weights','editor','help','settings'].forEach(t => {
+  ['intake','tracker','active-projects','submitters','insights','weights','editor','help','settings','exec-config'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.remove('active');
   });
@@ -6486,6 +6494,7 @@ function showConfigTab(tab) {
       loadWorkspaceMembers();
       loadRecentNotifications();
     }
+    if (tab === 'exec-config') { loadExecutionConfig(); }
   }
   // Show a back button
   const existing = document.getElementById('config-back-bar');
@@ -6502,7 +6511,7 @@ function showNewRequest() {
   const existing = document.getElementById('config-back-bar');
   if (existing) existing.remove();
   // Show intake tab without it appearing in nav
-  ['tracker','submitters','weights','editor','help','settings'].forEach(t => {
+  ['tracker','active-projects','submitters','weights','editor','help','settings','exec-config'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.remove('active');
   });

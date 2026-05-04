@@ -1529,7 +1529,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-04 07:45:00 PM EST';
+const BUILD_STAMP = '2026-05-04 07:50:00 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1724,7 +1724,14 @@ async function loadProjects() {
       isSample: p.is_sample,
       date: new Date(p.created_at).toLocaleDateString(),
       created_at: p.created_at,
-      updated_at: p.updated_at
+      updated_at: p.updated_at,
+      execution_sponsor_group: p.execution_sponsor_group || null,
+      execution_platform: p.execution_platform || null,
+      execution_priority: p.execution_priority || null,
+      execution_eta: p.execution_eta || null,
+      execution_lifecycle: p.execution_lifecycle || null,
+      execution_status: p.execution_status || null,
+      execution_owners: p.execution_owners || [],
     }));
   }
 }

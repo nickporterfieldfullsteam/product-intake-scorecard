@@ -1529,7 +1529,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-04 07:30:00 PM EST';
+const BUILD_STAMP = '2026-05-04 07:35:00 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -4368,6 +4368,7 @@ function renderProjectList() {
           <summary style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;padding:4px 0;user-select:none;list-style:none;display:flex;align-items:center;gap:6px;"><span style="font-size:10px;">▶</span> Scoring criteria</summary>
           <div style="margin-top:4px;">${criteriaRows}</div>
         </details>` : ''}
+        ${status === 'Accepted' ? buildExecutionSection(p) : ''}
         <div class="btn-row">
           <button class="btn-primary" style="font-size:12px;padding:6px 14px;" data-draft-save="${p.id}" disabled onclick="saveDraft('${p.id}')">Save</button>
           <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="autoSaveThen('${p.id}', () => editProject('${p.id}'))">Edit &amp; re-score</button>
@@ -4377,6 +4378,98 @@ function renderProjectList() {
       </div>`;
     container.appendChild(row);
   });
+}
+
+function buildExecutionSection(p) {
+  const sponsorGroups = execConfig['execution_sponsor_groups'] || [];
+  const platforms = execConfig['execution_platforms'] || [];
+  const priorities = execConfig['execution_priorities'] || [];
+  const lifecycleStages = execConfig['execution_lifecycle_stages'] || [];
+  const statuses = execConfig['execution_statuses'] || [];
+  const people = execConfig['execution_people'] || [];
+  const owners = p.execution_owners || [];
+
+  function optList(values, current) {
+    return `<option value="">—</option>` + values.map(v =>
+      `<option value="${escapeHtml(v)}" ${current === v ? 'selected' : ''}>${escapeHtml(v)}</option>`
+    ).join('');
+  }
+
+  const ownerChecks = people.map(name => {
+    const checked = owners.includes(name) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:3px 0;cursor:pointer;">
+      <input type="checkbox" ${checked} style="width:auto;accent-color:#1a1a1a;" onchange="toggleExecOwner('${p.id}','${escapeHtml(name)}',this.checked)">
+      ${escapeHtml(name)}
+    </label>`;
+  }).join('');
+
+  return `
+    <div style="border-top:2px solid #e5e5e5;margin:12px 0;padding-top:12px;">
+      <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Execution tracking</div>
+      <div class="proj-detail-grid" style="margin-bottom:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Sponsor group</label>
+          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_sponsor_group',this.value)">
+            ${optList(sponsorGroups, p.execution_sponsor_group)}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Platform</label>
+          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_platform',this.value)">
+            ${optList(platforms, p.execution_platform)}
+          </select>
+        </div>
+      </div>
+      <div class="proj-detail-grid" style="margin-bottom:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Priority</label>
+          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_priority',this.value)">
+            ${optList(priorities, p.execution_priority)}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">ETA</label>
+          <input type="date" style="font-size:13px;" value="${p.execution_eta || ''}" onchange="saveExecField('${p.id}','execution_eta',this.value || null)">
+        </div>
+      </div>
+      <div class="proj-detail-grid" style="margin-bottom:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Lifecycle</label>
+          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_lifecycle',this.value)">
+            ${optList(lifecycleStages, p.execution_lifecycle)}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Execution status</label>
+          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_status',this.value)">
+            ${optList(statuses, p.execution_status)}
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Owners</label>
+        ${people.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px 16px;">${ownerChecks}</div>` : '<p style="font-size:12px;color:#bbb;font-style:italic;">No people configured yet. Add them in ⚙ → Active Projects config.</p>'}
+      </div>
+    </div>`;
+}
+
+async function saveExecField(projectId, dbField, value) {
+  const p = projects.find(x => x.id == projectId);
+  if (!p) return;
+  p[dbField] = value;
+  await sbUpdateProjectField(projectId, dbField, value);
+  toast('Saved.');
+}
+
+async function toggleExecOwner(projectId, name, checked) {
+  const p = projects.find(x => x.id == projectId);
+  if (!p) return;
+  let owners = [...(p.execution_owners || [])];
+  if (checked && !owners.includes(name)) owners.push(name);
+  if (!checked) owners = owners.filter(o => o !== name);
+  p.execution_owners = owners;
+  await sbUpdateProjectField(projectId, 'execution_owners', owners);
+  toast('Saved.');
 }
 
 function toggleProjectDetail(id) {

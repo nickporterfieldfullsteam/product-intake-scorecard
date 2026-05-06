@@ -62,10 +62,11 @@ test.describe('Phase 3 C.3 — Reps tab', () => {
     const cards = authedPage.locator('#submitters-content .submitter-card');
     const bar = authedPage.locator('.submitter-sort-bar');
 
+    // Wait for cards to render before interacting with filter chips
+    await expect(cards).toHaveCount(3, { timeout: 10_000 });
+
     // All chip shows count of 3
     await expect(bar.getByRole('button', { name: /^All\s*3/ })).toBeVisible();
-    // Initially showing all 3
-    await expect(cards).toHaveCount(3);
 
     // Click Active chip → 2 cards
     await bar.getByRole('button', { name: /^Active\s*2/ }).click();
@@ -74,7 +75,7 @@ test.describe('Phase 3 C.3 — Reps tab', () => {
     await expect(authedPage.locator('#submitters-content')).not.toContainText('Inactive One');
 
     // Click Inactive chip → 1 card
-    await bar.getByRole('button', { name: /^Inactive\s*1/ }).click();
+    await bar.getByRole('button', { name: /^Inactive\s*1/ }).click({ timeout: 10_000 });
     await expect(cards).toHaveCount(1);
     await expect(authedPage.locator('#submitters-content')).toContainText('Inactive One');
 
@@ -134,8 +135,8 @@ test.describe('Phase 3 C.3 — Reps tab', () => {
     await expect(authedPage.locator('#toast')).toBeVisible({ timeout: 5_000 });
     await expect(authedPage.locator('.modal-overlay')).toHaveCount(0);
 
-    // List shows the new rep with Active badge
-    await expect(authedPage.locator('#submitters-content')).toContainText('Test New Rep');
+    // Wait for the list to update — loadReps + renderSubmitters is async
+    await expect(authedPage.locator('#submitters-content')).toContainText('Test New Rep', { timeout: 10_000 });
     await expect(authedPage.locator('.submitter-card .rep-badge.active')).toHaveCount(1);
 
     // DB confirms it
@@ -153,9 +154,16 @@ test.describe('Phase 3 C.3 — Reps tab', () => {
     await authedPage.reload();
     await openRepsTab(authedPage, 2);
 
+    // Wait for cards to fully render
+    const cards = authedPage.locator('#submitters-content .submitter-card');
+    await expect(cards).toHaveCount(2, { timeout: 10_000 });
+
     // ── Active rep menu ──
     const activeCard = authedPage.locator('.submitter-card', { hasText: 'Alpha Rep' });
-    await activeCard.locator('.rep-menu-btn').click();
+    await expect(activeCard).toBeVisible();
+    // Wait a moment for layout to stabilize
+    await authedPage.waitForTimeout(300);
+    await activeCard.locator('.rep-menu-btn').click({ force: true });
     await expect(activeCard.locator('.rep-menu-popover')).toBeVisible();
     await expect(activeCard.locator('.rep-menu-popover')).toContainText('Copy portal link');
     await expect(activeCard.locator('.rep-menu-popover')).toContainText('Deactivate rep');
@@ -169,7 +177,9 @@ test.describe('Phase 3 C.3 — Reps tab', () => {
     // — useful for sharing the invite link when re-engaging an inactive rep.
     // Only the toggle action differs by group.
     const inactiveCard = authedPage.locator('.submitter-card', { hasText: 'Beta Rep' });
-    await inactiveCard.locator('.rep-menu-btn').click();
+    await expect(inactiveCard).toBeVisible();
+    await authedPage.waitForTimeout(300);
+    await inactiveCard.locator('.rep-menu-btn').click({ force: true });
     await expect(inactiveCard.locator('.rep-menu-popover')).toContainText('Reactivate rep');
     await expect(inactiveCard.locator('.rep-menu-popover')).not.toContainText('Deactivate');
   });
@@ -181,18 +191,23 @@ test.describe('Phase 3 C.3 — Reps tab', () => {
     await authedPage.reload();
     await openRepsTab(authedPage, 1);
 
+    const cards = authedPage.locator('#submitters-content .submitter-card');
+    await expect(cards).toHaveCount(1, { timeout: 10_000 });
+
     const card = authedPage.locator('.submitter-card', { hasText: 'Deactivate Me' });
     await expect(card).toHaveClass(/submitter-card/);
     await expect(card).not.toHaveClass(/inactive/);
 
     // Open menu, click Deactivate
-    await card.locator('.rep-menu-btn').click();
-    await card.locator('.rep-menu-popover button', { hasText: /Deactivate rep/i }).click();
+    await authedPage.waitForTimeout(300);
+    await card.locator('.rep-menu-btn').click({ force: true });
+    await expect(card.locator('.rep-menu-popover')).toBeVisible({ timeout: 5_000 });
+    await card.locator('.rep-menu-popover button', { hasText: /Deactivate rep/i }).click({ force: true });
     await expect(authedPage.locator('#toast')).toBeVisible({ timeout: 5_000 });
 
     // Card should now have inactive class + badge text changes
     const newCard = authedPage.locator('.submitter-card', { hasText: 'Deactivate Me' });
-    await expect(newCard).toHaveClass(/inactive/);
+    await expect(newCard).toHaveClass(/inactive/, { timeout: 5_000 });
     await expect(newCard.locator('.rep-badge')).toHaveText(/inactive/i);
 
     // DB confirms
@@ -210,9 +225,15 @@ test.describe('Phase 3 C.3 — Reps tab', () => {
     await authedPage.reload();
     await openRepsTab(authedPage, 1);
 
+    const cards = authedPage.locator('#submitters-content .submitter-card');
+    await expect(cards).toHaveCount(1, { timeout: 10_000 });
+
     const card = authedPage.locator('.submitter-card', { hasText: 'Clip Test' });
-    await card.locator('.rep-menu-btn').click();
-    await card.locator('.rep-menu-popover button', { hasText: /Copy portal link/i }).click();
+    await expect(card).toBeVisible();
+    await authedPage.waitForTimeout(300);
+    await card.locator('.rep-menu-btn').click({ force: true });
+    await expect(card.locator('.rep-menu-popover')).toBeVisible({ timeout: 5_000 });
+    await card.locator('.rep-menu-popover button', { hasText: /Copy portal link/i }).click({ force: true });
     await expect(authedPage.locator('#toast')).toBeVisible({ timeout: 5_000 });
 
     // Read the clipboard

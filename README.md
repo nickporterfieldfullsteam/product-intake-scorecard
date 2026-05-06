@@ -6,13 +6,26 @@ Reps submit through a portal; admins and PMs review, score, decide, and notify b
 Live admin app: <https://nickporterfieldfullsteam.github.io/arbiter/>
 Live rep portal: <https://nickporterfieldfullsteam.github.io/arbiter/portal/>
 
-Currently: main app v1.16.0, portal v0.6.0.
+Currently: main app v1.17.0-alpha, portal v0.6.0.
 
 ---
 
 ## Recent significant changes
 
 A short orienting note for future readers; full history in `git log`.
+
+* **v1.17.0-alpha — Execution tracking arc (in progress).** Nav restructured:
+  Dashboard renamed to Intake, new Active Projects tab added. Migration 013
+  added seven `execution_*` columns to `projects` and seven config columns to
+  `workspace_config` (six manageable lists + status board token). A
+  `validate_status_board_token` SECURITY DEFINER RPC was created for future
+  anon access to the shareable board. Active Projects config (six lists +
+  shareable board token management) lives in ⚙ → Active Projects config.
+  Accepted projects show an Execution tracking section in their detail panel
+  with auto-saving fields. Active Projects tab shows accepted projects with
+  execution column pills. See
+  [Planned: v1.17.x](#planned-v117x--execution-tracking-arc) for the full
+  spec and remaining work.
 
 * **v1.16.0 — Pending-invite flow.** An admin can now invite a member by
   email even if that person doesn't have an auth account yet. The
@@ -610,37 +623,70 @@ expired" message. No information about what Arbiter is or what the workspace con
 
 Work in this order. Each step is independently deployable.
 
-1. **Schema verification** — run the two SQL queries above, confirm column names,
-   confirm no collision with existing fields. No code yet.
-2. **Migration 013** — new `projects` columns + seed new `workspace_config` keys.
-   Apply to Supabase before any JS changes.
-3. **Settings — Active Projects config UI** — six manageable lists + token
-   management. No Active Projects page yet; this seeds the data the page will read.
-4. **Active Projects page** — new tab in nav, list view of accepted projects with
-   execution columns, filter/sort. Click-through to project detail.
-5. **Project detail — Execution tab** — new tab alongside Intake on the detail
-   view. Execution fields editable here, saved via PATCH to `projects`.
-6. **Nav restructure** — rename Dashboard → Intake, add Active Projects tab,
-   reorder nav. Update Help tab QA checklist to reflect new nav.
-7. **New Dashboard** — PM operations view. Blocked/at-risk widgets, unreviewed
-   queue, overdue ETAs, upcoming revisit dates.
-8. **Shareable status board** — `/arbiter/status/` standalone page.
-9. **Tests** — new Playwright specs covering: execution field CRUD, config list
-   management (add/rename/delete/reassign), token generation, status board
-   rendering and token validation.
+1. ~~**Schema verification**~~ ✅ Done 2026-05-04. No `eta` column existed,
+   no collisions. `workspace_config` uses individual JSONB columns (not a
+   single `config` blob). Anon SELECT on `workspace_config` requires
+   workspace membership — necessitated the SECURITY DEFINER RPC for the
+   status board.
+2. ~~**Migration 013**~~ ✅ Done 2026-05-04. Seven new columns on `projects`,
+   seven new columns on `workspace_config`, plus
+   `validate_status_board_token` RPC with anon EXECUTE grant.
+3. ~~**Active Projects config UI**~~ ✅ Done 2026-05-04. Lives in ⚙ →
+   Active Projects config (its own panel in the Configure drawer, not inside
+   Settings). Six manageable lists with add/rename/delete-with-reassignment.
+   Status board token section with copy and regenerate.
+4. ~~**Active Projects page**~~ ✅ Done 2026-05-04. New tab in nav between
+   Intake and Reps. List view of accepted projects with execution column
+   pills (platform, priority, lifecycle, execution status, ETA, owner
+   avatars). Four filter dropdowns + search.
+5. ~~**Project detail — Execution section**~~ ✅ Done 2026-05-04. Accepted
+   projects show an Execution tracking section in their inline detail panel
+   (inside the Intake list). Six dropdown fields + owner checkboxes, all
+   auto-save on change via `sbUpdateProjectField`. Non-accepted projects
+   don't see this section.
+6. ~~**Nav restructure (partial)**~~ ✅ Done 2026-05-04. Dashboard renamed
+   to Intake, Active Projects tab added between Intake and Reps. Help tab
+   QA checklist not yet updated to reflect new nav.
+
+**Remaining — pick up in next session:**
+
+7. **Active Projects click-through** — clicking a row in Active Projects
+   currently does nothing useful because `toggleProjectDetail` targets the
+   Intake list's DOM. Needs either: (a) switch to Intake and auto-expand
+   the project, or (b) build a dedicated inline detail/edit view inside the
+   Active Projects tab. Option (b) is preferred — it should show only
+   execution fields (not the full intake detail), keeping the two surfaces
+   cleanly separated.
+8. **Help tab updates** — update QA checklist and help topics to reflect
+   the renamed Intake tab, new Active Projects tab, and ⚙ → Active
+   Projects config. Update the Take a Tour steps if they reference
+   "Dashboard".
+9. **New Dashboard** — PM operations view. Blocked/at-risk widgets,
+   unreviewed queue, overdue ETAs, upcoming revisit dates. This is the
+   new first tab (not yet built — Intake is currently the default tab).
+10. **Shareable status board** — `/arbiter/status/` standalone HTML page.
+    Token validated via `validate_status_board_token` RPC. Shows accepted
+    projects grouped by lifecycle stage. No scoring data.
+11. **Tests** — new Playwright specs covering: execution field CRUD, config
+    list management (add/rename/delete/reassign), token generation, status
+    board rendering and token validation, Active Projects tab navigation
+    and filtering.
 
 ### What the Active Projects view looks like
 
-The view toggle (currently List / Board) becomes a three-way toggle:
-List / Board / Execution — or alternatively, Active Projects is its own top-level
-tab with its own list that only shows accepted projects and only shows execution
-columns. The second approach (separate tab) was chosen because it gives the PM a
-clean mental model: Intake = review queue, Active Projects = delivery pipeline.
+Active Projects is its own top-level tab (between Intake and Reps), giving the
+PM a clean mental model: Intake = review queue, Active Projects = delivery
+pipeline.
 
-The Active Projects list shows: project name + customer + rep + date (left),
-platform + priority pill + lifecycle pill + execution status pill + ETA + owner
-avatars (right). Filters: platform, lifecycle, execution status, owner. No score,
-no tier visible in this view.
+The list shows: project name + customer + rep + date (left), platform text +
+priority pill + lifecycle pill + execution status pill + ETA + owner avatars
+(right). Four filter dropdowns (platform, lifecycle, status, owner) plus
+free-text search. All filters populated from `execConfig` and live project data.
+
+**Known gap:** clicking a row currently calls `toggleProjectDetail()` which
+targets the Intake list's DOM and does nothing on the Active Projects tab.
+Next session needs to build a dedicated inline detail/edit view for execution
+fields inside this tab.
 
 ### What the new Dashboard looks like
 
@@ -669,11 +715,26 @@ without exposing other config. Confirm the existing anon policy on
 
 ### Open questions (resolve before or during build)
 
-* Does `projects` already have an `eta` or `revisit_date` column that could
-  collide with `execution_eta`? Verify via schema query.
-* What is the existing anon-role policy on `workspace_config`? Needed for
-  status board token validation design.
-* Should completed projects (intake status = Completed) appear in Active Projects,
-  or only while in-flight? Likely filter them out, but confirm with PM.
+*Resolved:*
+
+* ~~Does `projects` already have an `eta` or `revisit_date` column?~~ Yes,
+  `revisit_date` exists (date type). No `eta`. Named the new column
+  `execution_eta` — no collision.
+* ~~What is the existing anon-role policy on `workspace_config`?~~ SELECT
+  requires workspace membership (member or active rep). Anon cannot read.
+  Solved with `validate_status_board_token` SECURITY DEFINER RPC.
+
+*Still open:*
+
+* Should completed projects (intake status = Completed) appear in Active
+  Projects, or only while in-flight? Currently filtered to `status === 'Accepted'`
+  only. Confirm with PM.
 * Should the shareable board show a "last updated" timestamp? Useful for
   stakeholders to know they're seeing current data.
+* The `loadProjects()` mapper uses camelCase for intake fields (`lockedVals`,
+  `criteriaVals`) but snake_case for execution fields (`execution_sponsor_group`).
+  This inconsistency works but could bite later. Consider normalizing in a
+  future cleanup pass.
+* The Active Projects config lists don't yet support drag-to-reorder — they
+  render in order but reordering requires deleting and re-adding. A future
+  session should add drag handles or move-up/move-down buttons.

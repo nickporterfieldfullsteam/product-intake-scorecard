@@ -6,10 +6,11 @@ test.describe('Smoke', () => {
     // Footer shows version and build
     const footerBuild = authedPage.locator('#footer-build');
     await expect(footerBuild).toBeVisible();
-    await expect(footerBuild).toHaveText(/^v\d+\.\d+\.\d+ · Build: /);
+    await expect(footerBuild).toHaveText(/^v\d+\.\d+\.\d+(-[a-z0-9.]+)? · Build: /);
 
     // Core tabs present
     await expect(authedPage.locator('#tab-btn-tracker')).toBeVisible();
+    await expect(authedPage.locator('#tab-btn-active-projects')).toBeVisible();
     await expect(authedPage.locator('#tab-btn-submitters')).toBeVisible();
     await expect(authedPage.locator('#tab-btn-insights')).toBeVisible();
     await expect(authedPage.locator('#tab-btn-help')).toBeVisible();

@@ -525,10 +525,10 @@
       </div>
       <!-- Filters -->
       <div id="ap-filter-bar" style="display:flex;align-items:center;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">
-        <select id="ap-filter-platform" style="width:auto;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All platforms</option></select>
-        <select id="ap-filter-lifecycle" style="width:auto;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All lifecycle</option></select>
-        <select id="ap-filter-status" style="width:auto;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All statuses</option></select>
-        <select id="ap-filter-owner" style="width:auto;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All owners</option></select>
+        <select id="ap-filter-platform" style="flex:1;min-width:100px;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All platforms</option></select>
+        <select id="ap-filter-lifecycle" style="flex:1;min-width:100px;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All lifecycle</option></select>
+        <select id="ap-filter-status" style="flex:1;min-width:100px;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All statuses</option></select>
+        <select id="ap-filter-owner" style="flex:1;min-width:100px;font-size:12px;padding:3px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;" onchange="renderActiveProjects()"><option value="">All owners</option></select>
         <button style="font-family:inherit;font-size:11px;padding:2px 7px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#aaa;cursor:pointer;" onclick="clearActiveProjectsFilters()">&#x2715;</button>
       </div>
       <!-- List -->
@@ -722,14 +722,14 @@
   <div id="tab-exec-config" class="tab-panel">
     <div class="section">
       <div class="section-title">Active projects configuration</div>
-      <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Manage the dropdown options available when tracking accepted projects. Drag to reorder. Renaming a value updates all projects using it automatically. Deleting a value in use will prompt you to reassign existing projects first.</p>
+      <p style="font-size:13px;color:#888;margin-bottom:1.25rem;">Manage the dropdown options available when tracking accepted projects. Click a color swatch to change a value's pill color. Renaming a value updates all projects using it automatically. Deleting a value in use will prompt you to reassign existing projects first.</p>
 
       <!-- Sponsor Groups -->
       <div style="margin-bottom:1.5rem;">
         <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Sponsor groups</p>
         <div id="exec-list-sponsor-groups" style="margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="exec-new-sponsor-group" placeholder="Add sponsor group…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <input type="text" id="exec-new-sponsor-group" placeholder="Add sponsor group…" style="flex:1;font-size:13px;padding:6px 10px;" onkeydown="if(event.key==='Enter'){addExecListItem('execution_sponsor_groups','exec-new-sponsor-group')}">
           <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_sponsor_groups','exec-new-sponsor-group')">Add</button>
         </div>
       </div>
@@ -739,7 +739,7 @@
         <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Platforms</p>
         <div id="exec-list-platforms" style="margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="exec-new-platform" placeholder="Add platform…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <input type="text" id="exec-new-platform" placeholder="Add platform…" style="flex:1;font-size:13px;padding:6px 10px;" onkeydown="if(event.key==='Enter'){addExecListItem('execution_platforms','exec-new-platform')}">
           <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_platforms','exec-new-platform')">Add</button>
         </div>
       </div>
@@ -749,7 +749,7 @@
         <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Priority levels</p>
         <div id="exec-list-priorities" style="margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="exec-new-priority" placeholder="Add priority level…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <input type="text" id="exec-new-priority" placeholder="Add priority level…" style="flex:1;font-size:13px;padding:6px 10px;" onkeydown="if(event.key==='Enter'){addExecListItem('execution_priorities','exec-new-priority')}">
           <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_priorities','exec-new-priority')">Add</button>
         </div>
       </div>
@@ -760,7 +760,7 @@
         <p style="font-size:12px;color:#aaa;margin-bottom:8px;">Order matters — stages run sequentially from top to bottom.</p>
         <div id="exec-list-lifecycle-stages" style="margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="exec-new-lifecycle-stage" placeholder="Add lifecycle stage…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <input type="text" id="exec-new-lifecycle-stage" placeholder="Add lifecycle stage…" style="flex:1;font-size:13px;padding:6px 10px;" onkeydown="if(event.key==='Enter'){addExecListItem('execution_lifecycle_stages','exec-new-lifecycle-stage')}">
           <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_lifecycle_stages','exec-new-lifecycle-stage')">Add</button>
         </div>
       </div>
@@ -770,7 +770,7 @@
         <p style="font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Execution statuses</p>
         <div id="exec-list-statuses" style="margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="exec-new-status" placeholder="Add status…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <input type="text" id="exec-new-status" placeholder="Add status…" style="flex:1;font-size:13px;padding:6px 10px;" onkeydown="if(event.key==='Enter'){addExecListItem('execution_statuses','exec-new-status')}">
           <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_statuses','exec-new-status')">Add</button>
         </div>
       </div>
@@ -781,7 +781,7 @@
         <p style="font-size:12px;color:#aaa;margin-bottom:8px;">Names available when assigning owners to projects. These people don't need an Arbiter account.</p>
         <div id="exec-list-people" style="margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="exec-new-person" placeholder="Add person…" style="flex:1;font-size:13px;padding:6px 10px;">
+          <input type="text" id="exec-new-person" placeholder="Add person…" style="flex:1;font-size:13px;padding:6px 10px;" onkeydown="if(event.key==='Enter'){addExecListItem('execution_people','exec-new-person')}">
           <button class="btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="addExecListItem('execution_people','exec-new-person')">Add</button>
         </div>
       </div>
@@ -1529,7 +1529,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-05 09:15:00 AM EST';
+const BUILD_STAMP = '2026-05-05 09:30:00 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -4388,15 +4388,14 @@ function renderProjectList() {
 }
 
 function buildExecutionSection(p, apMode) {
-  const sponsorGroups = execConfig['execution_sponsor_groups'] || [];
-  const platforms = execConfig['execution_platforms'] || [];
-  const priorities = execConfig['execution_priorities'] || [];
-  const lifecycleStages = execConfig['execution_lifecycle_stages'] || [];
-  const statuses = execConfig['execution_statuses'] || [];
+  const sponsorGroups = execLabels('execution_sponsor_groups');
+  const platforms = execLabels('execution_platforms');
+  const priorities = execLabels('execution_priorities');
+  const lifecycleStages = execLabels('execution_lifecycle_stages');
+  const statuses = execLabels('execution_statuses');
   const people = execConfig['execution_people'] || [];
   const owners = p.execution_owners || [];
-  const saveFn = apMode ? 'saveExecFieldAp' : 'saveExecField';
-  const ownerFn = apMode ? 'toggleExecOwnerAp' : 'toggleExecOwner';
+  const uid = p.id.replace(/-/g,'').substring(0,8); // short unique id for DOM elements
 
   function optList(values, current) {
     return `<option value="">—</option>` + values.map(v =>
@@ -4404,13 +4403,21 @@ function buildExecutionSection(p, apMode) {
     ).join('');
   }
 
-  const ownerChecks = people.map(name => {
-    const checked = owners.includes(name) ? 'checked' : '';
-    return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:3px 0;cursor:pointer;">
-      <input type="checkbox" ${checked} style="width:auto;accent-color:#1a1a1a;" onchange="${ownerFn}('${p.id}','${escapeHtml(name)}',this.checked)">
+  const ownerChips = owners.map(name => {
+    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    return `<span style="display:inline-flex;align-items:center;gap:4px;background:#f5f5f3;border:1px solid #e5e5e5;border-radius:20px;padding:3px 8px 3px 4px;font-size:12px;">
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#EEEDFE;color:#534AB7;font-size:8px;font-weight:500;">${initials}</span>
       ${escapeHtml(name)}
-    </label>`;
-  }).join('');
+      <span onclick="removeExecOwnerChip('${p.id}','${escapeHtml(name)}',${apMode ? 'true' : 'false'})" style="cursor:pointer;color:#aaa;font-size:14px;line-height:1;margin-left:2px;">×</span>
+    </span>`;
+  }).join(' ');
+
+  const availablePeople = people.filter(n => !owners.includes(n));
+  const ownerDropdown = availablePeople.length ? `
+    <select style="font-size:12px;width:auto;padding:3px 7px;margin-top:6px;" onchange="addExecOwnerChip('${p.id}',this.value,${apMode ? 'true' : 'false'});this.value='';">
+      <option value="">+ Add owner…</option>
+      ${availablePeople.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
+    </select>` : '';
 
   return `
     <div style="${apMode ? '' : 'border-top:2px solid #e5e5e5;margin:12px 0;padding-top:12px;'}">
@@ -4418,13 +4425,13 @@ function buildExecutionSection(p, apMode) {
       <div class="proj-detail-grid" style="margin-bottom:12px;">
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Sponsor group</label>
-          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_sponsor_group',this.value)">
+          <select id="exec-sg-${uid}" style="font-size:13px;">
             ${optList(sponsorGroups, p.execution_sponsor_group)}
           </select>
         </div>
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Platform</label>
-          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_platform',this.value)">
+          <select id="exec-pl-${uid}" style="font-size:13px;">
             ${optList(platforms, p.execution_platform)}
           </select>
         </div>
@@ -4432,52 +4439,100 @@ function buildExecutionSection(p, apMode) {
       <div class="proj-detail-grid" style="margin-bottom:12px;">
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Priority</label>
-          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_priority',this.value)">
+          <select id="exec-pr-${uid}" style="font-size:13px;">
             ${optList(priorities, p.execution_priority)}
           </select>
         </div>
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">ETA</label>
-          <input type="date" style="font-size:13px;" value="${p.execution_eta || ''}" onchange="${saveFn}('${p.id}','execution_eta',this.value || null)">
+          <input type="date" id="exec-eta-${uid}" style="font-size:13px;" value="${p.execution_eta || ''}">
         </div>
       </div>
       <div class="proj-detail-grid" style="margin-bottom:12px;">
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Lifecycle</label>
-          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_lifecycle',this.value)">
+          <select id="exec-lc-${uid}" style="font-size:13px;">
             ${optList(lifecycleStages, p.execution_lifecycle)}
           </select>
         </div>
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Execution status</label>
-          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_status',this.value)">
+          <select id="exec-es-${uid}" style="font-size:13px;">
             ${optList(statuses, p.execution_status)}
           </select>
         </div>
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Owners</label>
-        ${people.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px 16px;">${ownerChecks}</div>` : '<p style="font-size:12px;color:#bbb;font-style:italic;">No people configured yet. Add them in ⚙ → Active Projects config.</p>'}
+        ${people.length ? `<div id="exec-owners-${uid}" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${ownerChips}${ownerDropdown}</div>` : '<p style="font-size:12px;color:#bbb;font-style:italic;">No people configured yet. Add them in ⚙ → Active Projects config.</p>'}
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+        <button style="font-family:inherit;font-size:13px;padding:6px 18px;border:1px solid #1a1a1a;border-radius:8px;background:#1a1a1a;color:#fff;cursor:pointer;" onclick="saveExecDraft('${p.id}','${uid}',${apMode ? 'true' : 'false'})">Save changes</button>
       </div>
     </div>`;
 }
 
+async function saveExecDraft(projectId, uid, apMode) {
+  const p = projects.find(x => x.id == projectId);
+  if (!p) return;
+  const fields = {
+    execution_sponsor_group: document.getElementById('exec-sg-'+uid)?.value || null,
+    execution_platform:      document.getElementById('exec-pl-'+uid)?.value || null,
+    execution_priority:      document.getElementById('exec-pr-'+uid)?.value || null,
+    execution_eta:           document.getElementById('exec-eta-'+uid)?.value || null,
+    execution_lifecycle:     document.getElementById('exec-lc-'+uid)?.value || null,
+    execution_status:        document.getElementById('exec-es-'+uid)?.value || null,
+  };
+  // Update in-memory
+  Object.assign(p, fields);
+  // Batch save to DB
+  await _sb.from('projects').update(fields).eq('id', projectId);
+  if (apMode) renderActiveProjects();
+  toast('Saved.');
+}
+
+function addExecOwnerChip(projectId, name, apMode) {
+  if (!name) return;
+  const p = projects.find(x => x.id == projectId);
+  if (!p) return;
+  const owners = [...(p.execution_owners || [])];
+  if (!owners.includes(name)) owners.push(name);
+  p.execution_owners = owners;
+  sbUpdateProjectField(projectId, 'execution_owners', owners);
+  // Re-render the section
+  if (apMode) {
+    const panel = document.getElementById('ap-detail-' + projectId);
+    if (panel) panel.innerHTML = buildExecutionSection(p, true);
+  } else {
+    const panel = document.getElementById('proj-detail-' + projectId);
+    if (panel) {
+      const execDiv = panel.querySelector('[data-exec-section]');
+      if (execDiv) execDiv.outerHTML = buildExecutionSection(p, false).replace('<div style="border-top', '<div data-exec-section style="border-top');
+    }
+  }
+}
+
+function removeExecOwnerChip(projectId, name, apMode) {
+  const p = projects.find(x => x.id == projectId);
+  if (!p) return;
+  const owners = (p.execution_owners || []).filter(o => o !== name);
+  p.execution_owners = owners;
+  sbUpdateProjectField(projectId, 'execution_owners', owners);
+  if (apMode) {
+    const panel = document.getElementById('ap-detail-' + projectId);
+    if (panel) panel.innerHTML = buildExecutionSection(p, true);
+  } else {
+    // Re-render entire tracker detail is simplest
+    renderTracker();
+  }
+}
+
+// Legacy wrappers kept for backward compat (intake detail panel)
 async function saveExecField(projectId, dbField, value) {
   const p = projects.find(x => x.id == projectId);
   if (!p) return;
   p[dbField] = value;
   await sbUpdateProjectField(projectId, dbField, value);
-  toast('Saved.');
-}
-
-async function toggleExecOwner(projectId, name, checked) {
-  const p = projects.find(x => x.id == projectId);
-  if (!p) return;
-  let owners = [...(p.execution_owners || [])];
-  if (checked && !owners.includes(name)) owners.push(name);
-  if (!checked) owners = owners.filter(o => o !== name);
-  p.execution_owners = owners;
-  await sbUpdateProjectField(projectId, 'execution_owners', owners);
   toast('Saved.');
 }
 
@@ -5406,7 +5461,53 @@ const EXEC_PROJECT_COL = {
   execution_people:           null, // owners handled separately (array)
 };
 
+// Lists that use color objects vs plain strings
+const EXEC_COLOR_LISTS = ['execution_sponsor_groups','execution_platforms','execution_priorities','execution_lifecycle_stages','execution_statuses'];
+
+// Preset palette for pill colors
+const EXEC_PALETTE = [
+  { bg:'#F1EFE8', color:'#5F5E5A', name:'Gray' },
+  { bg:'#E1F5EE', color:'#0F6E56', name:'Green' },
+  { bg:'#E6F1FB', color:'#185FA5', name:'Blue' },
+  { bg:'#EEEDFE', color:'#534AB7', name:'Purple' },
+  { bg:'#FAEEDA', color:'#854F0B', name:'Amber' },
+  { bg:'#FCEBEB', color:'#A32D2D', name:'Red' },
+  { bg:'#FAECE7', color:'#993C1D', name:'Orange' },
+  { bg:'#E0F5F5', color:'#0E6E6E', name:'Teal' },
+  { bg:'#FCE8F3', color:'#9B2C6B', name:'Pink' },
+];
+
 let execConfig = {}; // local cache keyed by column name
+
+// Helper: get label from item (handles both string and {label,bg,color} format)
+function execItemLabel(item) {
+  return typeof item === 'string' ? item : (item?.label || '');
+}
+
+// Helper: get pill colors for a value from its config list
+function execPillColors(col, label) {
+  if (!label) return null;
+  const list = execConfig[col] || [];
+  const item = list.find(x => execItemLabel(x) === label);
+  if (item && typeof item === 'object' && item.bg) return { bg: item.bg, color: item.color };
+  return { bg:'#F1EFE8', color:'#5F5E5A' }; // default gray
+}
+
+// Helper: get all labels from a config list
+function execLabels(col) {
+  return (execConfig[col] || []).map(execItemLabel);
+}
+
+// Migrate plain strings to objects on load (one-time per workspace)
+function migrateExecList(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(item => {
+    if (typeof item === 'string') {
+      return { label: item, bg: '#F1EFE8', color: '#5F5E5A' };
+    }
+    return item;
+  });
+}
 
 async function loadExecutionConfig() {
   if (!currentWorkspaceId) return;
@@ -5415,8 +5516,25 @@ async function loadExecutionConfig() {
     .eq('workspace_id', currentWorkspaceId)
     .single();
   if (error || !data) { console.error('[exec config] load error', error); return; }
-  Object.keys(EXEC_LIST_MAP).forEach(col => { execConfig[col] = data[col] ?? []; });
+
+  // Migrate color lists from string[] to object[], leave people as string[]
+  let needsMigration = false;
+  EXEC_COLOR_LISTS.forEach(col => {
+    const raw = data[col] ?? [];
+    if (raw.length && typeof raw[0] === 'string') needsMigration = true;
+    execConfig[col] = EXEC_COLOR_LISTS.includes(col) ? migrateExecList(raw) : raw;
+  });
+  execConfig['execution_people'] = data['execution_people'] ?? [];
   execConfig['status_board_token'] = data['status_board_token'] ?? '';
+
+  // Persist migration if needed
+  if (needsMigration) {
+    const updates = {};
+    EXEC_COLOR_LISTS.forEach(col => { updates[col] = execConfig[col]; });
+    await _sb.from('workspace_config').update(updates).eq('workspace_id', currentWorkspaceId);
+    console.log('[exec config] migrated string lists to color objects');
+  }
+
   renderExecLists();
   renderStatusBoardUrl();
 }
@@ -5426,23 +5544,79 @@ function renderExecLists() {
     const container = document.getElementById(containerId);
     if (!container) return;
     const items = execConfig[col] || [];
+    const isColorList = EXEC_COLOR_LISTS.includes(col);
     if (!items.length) {
       container.innerHTML = '<p style="font-size:13px;color:#bbb;font-style:italic;">No items yet.</p>';
       return;
     }
-    container.innerHTML = items.map((item, idx) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f5f3;">
-        <span style="color:#ccc;font-size:14px;user-select:none;">⠿</span>
-        <span class="exec-item-label" style="flex:1;font-size:13px;" ondblclick="startExecRename(this,'${col}',${idx})">${escapeHtml(item)}</span>
-        <button onclick="startExecRename(this.previousElementSibling,'${col}',${idx})" style="font-family:inherit;font-size:11px;padding:2px 8px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;cursor:pointer;">Rename</button>
-        <button onclick="deleteExecListItem('${col}',${idx})" style="font-family:inherit;font-size:11px;padding:2px 8px;border:1px solid #FCEBEB;border-radius:6px;background:#fff;color:#a32d2d;cursor:pointer;">Delete</button>
-      </div>
-    `).join('');
+    container.innerHTML = items.map((item, idx) => {
+      const label = execItemLabel(item);
+      if (isColorList) {
+        const bg = item.bg || '#F1EFE8';
+        const clr = item.color || '#5F5E5A';
+        return `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f5f3;">
+          <span style="color:#ccc;font-size:14px;user-select:none;">⠿</span>
+          <span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${bg};border:2px solid ${clr};cursor:pointer;flex-shrink:0;" title="Change color" onclick="showExecPalette('${col}',${idx},this)"></span>
+          <span class="exec-item-label" style="flex:1;font-size:13px;" ondblclick="startExecRename(this,'${col}',${idx})">${escapeHtml(label)}</span>
+          <button onclick="startExecRename(this.parentElement.querySelector('.exec-item-label'),'${col}',${idx})" style="font-family:inherit;font-size:11px;padding:2px 8px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;cursor:pointer;">Rename</button>
+          <button onclick="deleteExecListItem('${col}',${idx})" style="font-family:inherit;font-size:11px;padding:2px 8px;border:1px solid #FCEBEB;border-radius:6px;background:#fff;color:#a32d2d;cursor:pointer;">Delete</button>
+        </div>`;
+      } else {
+        return `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f5f3;">
+          <span style="color:#ccc;font-size:14px;user-select:none;">⠿</span>
+          <span class="exec-item-label" style="flex:1;font-size:13px;" ondblclick="startExecRename(this,'${col}',${idx})">${escapeHtml(label)}</span>
+          <button onclick="startExecRename(this.previousElementSibling,'${col}',${idx})" style="font-family:inherit;font-size:11px;padding:2px 8px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#888;cursor:pointer;">Rename</button>
+          <button onclick="deleteExecListItem('${col}',${idx})" style="font-family:inherit;font-size:11px;padding:2px 8px;border:1px solid #FCEBEB;border-radius:6px;background:#fff;color:#a32d2d;cursor:pointer;">Delete</button>
+        </div>`;
+      }
+    }).join('');
   });
 }
 
+function showExecPalette(col, idx, swatchEl) {
+  // Remove any existing palette popup
+  const existing = document.getElementById('exec-palette-popup');
+  if (existing) existing.remove();
+  const popup = document.createElement('div');
+  popup.id = 'exec-palette-popup';
+  popup.style.cssText = 'position:absolute;z-index:1000;background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);display:flex;gap:6px;flex-wrap:wrap;width:200px;';
+  popup.innerHTML = EXEC_PALETTE.map((p, pi) =>
+    `<span title="${p.name}" onclick="pickExecColor('${col}',${idx},${pi})" style="display:inline-block;width:28px;height:28px;border-radius:50%;background:${p.bg};border:2px solid ${p.color};cursor:pointer;transition:transform 0.1s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform=''"></span>`
+  ).join('');
+  // Position near the swatch
+  const rect = swatchEl.getBoundingClientRect();
+  popup.style.left = rect.left + 'px';
+  popup.style.top = (rect.bottom + 4) + 'px';
+  popup.style.position = 'fixed';
+  document.body.appendChild(popup);
+  // Close on click outside
+  setTimeout(() => {
+    document.addEventListener('click', function closePopup(e) {
+      if (!popup.contains(e.target) && e.target !== swatchEl) {
+        popup.remove();
+        document.removeEventListener('click', closePopup);
+      }
+    });
+  }, 10);
+}
+
+async function pickExecColor(col, idx, paletteIdx) {
+  const palette = EXEC_PALETTE[paletteIdx];
+  const item = execConfig[col][idx];
+  if (typeof item === 'object') {
+    item.bg = palette.bg;
+    item.color = palette.color;
+  }
+  await saveExecList(col, execConfig[col]);
+  const popup = document.getElementById('exec-palette-popup');
+  if (popup) popup.remove();
+  toast('Color updated.');
+}
+
 function startExecRename(labelEl, col, idx) {
-  const current = execConfig[col][idx];
+  const current = execItemLabel(execConfig[col][idx]);
   const input = document.createElement('input');
   input.type = 'text';
   input.value = current;
@@ -5460,9 +5634,15 @@ function startExecRename(labelEl, col, idx) {
 }
 
 async function renameExecListItem(col, idx, newVal) {
-  const oldVal = execConfig[col][idx];
+  const item = execConfig[col][idx];
+  const oldVal = execItemLabel(item);
+  const isColorList = EXEC_COLOR_LISTS.includes(col);
   const newList = [...execConfig[col]];
-  newList[idx] = newVal;
+  if (isColorList && typeof newList[idx] === 'object') {
+    newList[idx] = { ...newList[idx], label: newVal };
+  } else {
+    newList[idx] = newVal;
+  }
   const projectCol = EXEC_PROJECT_COL[col];
 
   // Bulk-update projects using old value
@@ -5510,15 +5690,19 @@ async function addExecListItem(col, inputId) {
   if (!input) return;
   const val = input.value.trim();
   if (!val) return;
-  if ((execConfig[col] || []).includes(val)) { toast('Already in the list.'); return; }
-  const newList = [...(execConfig[col] || []), val];
+  const labels = execLabels(col);
+  if (labels.includes(val)) { toast('Already in the list.'); return; }
+  const isColorList = EXEC_COLOR_LISTS.includes(col);
+  const newItem = isColorList ? { label: val, bg: '#F1EFE8', color: '#5F5E5A' } : val;
+  const newList = [...(execConfig[col] || []), newItem];
   await saveExecList(col, newList);
   input.value = '';
   toast('Added.');
 }
 
 async function deleteExecListItem(col, idx) {
-  const val = execConfig[col][idx];
+  const item = execConfig[col][idx];
+  const val = execItemLabel(item);
   const projectCol = EXEC_PROJECT_COL[col];
   let inUseCount = 0;
 
@@ -5534,17 +5718,18 @@ async function deleteExecListItem(col, idx) {
 
   if (inUseCount > 0) {
     const remaining = (execConfig[col] || []).filter((_, i) => i !== idx);
+    const remainingLabels = remaining.map(execItemLabel);
     if (!remaining.length) {
       alert(`"${val}" is used by ${inUseCount} project(s). Add another value first before deleting this one.`);
       return;
     }
     const choice = prompt(
-      `"${val}" is used by ${inUseCount} project(s).\n\nReassign them to:\n${remaining.map((r,i) => `${i+1}. ${r}`).join('\n')}\n\nType the number:`
+      `"${val}" is used by ${inUseCount} project(s).\n\nReassign them to:\n${remainingLabels.map((r,i) => `${i+1}. ${r}`).join('\n')}\n\nType the number:`
     );
     if (!choice) return;
     const choiceIdx = parseInt(choice, 10) - 1;
     if (isNaN(choiceIdx) || choiceIdx < 0 || choiceIdx >= remaining.length) { toast('Invalid choice. Delete cancelled.'); return; }
-    const newVal = remaining[choiceIdx];
+    const newVal = remainingLabels[choiceIdx];
 
     if (projectCol) {
       await _sb.from('projects').update({ [projectCol]: newVal })
@@ -5634,29 +5819,9 @@ function renderActiveProjects() {
     return;
   }
 
-  const statusColors = {
-    'On Track':   { bg:'#E1F5EE', color:'#0F6E56' },
-    'At Risk':    { bg:'#FAEEDA', color:'#854F0B' },
-    'Blocked':    { bg:'#FCEBEB', color:'#A32D2D' },
-    'On Hold':    { bg:'#F1EFE8', color:'#5F5E5A' },
-    'Needs Info': { bg:'#E6F1FB', color:'#185FA5' },
-    'Not Started':{ bg:'#F1EFE8', color:'#5F5E5A' },
-  };
-  const lifecycleColors = {
-    'Planning':   { bg:'#E6F1FB', color:'#185FA5' },
-    'Development':{ bg:'#EEEDFE', color:'#534AB7' },
-    'Testing':    { bg:'#FAEEDA', color:'#854F0B' },
-    'Releasing':  { bg:'#EAF3DE', color:'#3B6D11' },
-  };
-  const priorityColors = {
-    'Normal':           { bg:'#F1EFE8', color:'#5F5E5A' },
-    'High — 30 days':   { bg:'#FAECE7', color:'#993C1D' },
-    'Critical — ASAP':  { bg:'#FCEBEB', color:'#A32D2D' },
-  };
-
-  function pill(val, map) {
+  function pill(val, configCol) {
     if (!val) return '<span style="color:#bbb;font-size:12px;">—</span>';
-    const c = map[val] || { bg:'#F1EFE8', color:'#5F5E5A' };
+    const c = execPillColors(configCol, val);
     return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px;background:${c.bg};color:${c.color};white-space:nowrap;">${escapeHtml(val)}</span>`;
   }
 
@@ -5684,16 +5849,16 @@ function renderActiveProjects() {
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
             <div style="width:90px;font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.execution_platform||'')}</div>
-            <div style="width:80px;">${pill(p.execution_priority, priorityColors)}</div>
-            <div style="width:90px;">${pill(p.execution_lifecycle, lifecycleColors)}</div>
-            <div style="width:88px;">${pill(p.execution_status, statusColors)}</div>
+            <div style="min-width:80px;">${pill(p.execution_priority, 'execution_priorities')}</div>
+            <div style="min-width:80px;">${pill(p.execution_lifecycle, 'execution_lifecycle_stages')}</div>
+            <div style="min-width:80px;">${pill(p.execution_status, 'execution_statuses')}</div>
             <div style="width:52px;font-size:11px;color:#aaa;text-align:right;">${eta}</div>
             <div style="width:72px;text-align:right;">${ownerAvatars(p.execution_owners)}</div>
             <div id="ap-chev-${p.id}" style="color:#ccc;font-size:16px;transition:transform 0.15s;">›</div>
           </div>
         </div>
         <div id="ap-detail-${p.id}" style="display:none;padding:12px 0 16px;border-bottom:1px solid #e5e5e5;">
-          ${buildExecutionSection(p)}
+          ${buildExecutionSection(p, true)}
         </div>
       </div>
     `;
@@ -5735,24 +5900,6 @@ function toggleApDetail(id) {
   const isOpen = panel.style.display !== 'none';
   panel.style.display = isOpen ? 'none' : 'block';
   if (chev) chev.style.transform = isOpen ? '' : 'rotate(90deg)';
-}
-
-async function saveExecFieldAp(projectId, dbField, value) {
-  await saveExecField(projectId, dbField, value);
-  refreshApRow(projectId);
-}
-
-async function toggleExecOwnerAp(projectId, name, checked) {
-  await toggleExecOwner(projectId, name, checked);
-  refreshApRow(projectId);
-}
-
-function refreshApRow(projectId) {
-  // Re-render just the detail panel to reflect saved changes in the row pills
-  // Full re-render would close the panel, so we just update the detail content
-  const p = projects.find(x => x.id == projectId);
-  const panel = document.getElementById('ap-detail-' + projectId);
-  if (p && panel) panel.innerHTML = buildExecutionSection(p, true);
 }
 
 /* ── SETTINGS BACKUP ── */

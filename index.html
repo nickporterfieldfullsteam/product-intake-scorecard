@@ -1529,7 +1529,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-05 09:26:11 PM EST';
+const BUILD_STAMP = '2026-05-05 09:30:35 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -4414,7 +4414,7 @@ function buildExecutionSection(p, apMode) {
 
   const availablePeople = people.filter(n => !owners.includes(n));
   const ownerDropdown = availablePeople.length ? `
-    <select style="font-size:12px;width:auto;padding:3px 7px;margin-top:6px;" onchange="addExecOwnerChip('${p.id}',this.value,${apMode ? 'true' : 'false'});this.value='';">
+    <select style="font-size:12px;width:auto;padding:3px 7px;" onchange="addExecOwnerChip('${p.id}',this.value,${apMode ? 'true' : 'false'});this.value='';">
       <option value="">+ Add owner…</option>
       ${availablePeople.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
     </select>` : '';
@@ -4495,6 +4495,12 @@ async function saveExecDraft(projectId, uid, apMode) {
   // Batch save to DB
   const { error } = await _sb.from('projects').update(fields).eq('id', projectId);
   if (error) { console.error('[saveExecDraft] DB error:', error); toast('Error saving.'); return; }
+  // Re-render list to update row pills, then re-open this panel
+  renderActiveProjects();
+  const panel = document.getElementById('ap-detail-' + projectId);
+  const chev = document.getElementById('ap-chev-' + projectId);
+  if (panel) { panel.style.display = 'block'; }
+  if (chev) { chev.style.transform = 'rotate(90deg)'; }
   toast('Saved.');
 }
 

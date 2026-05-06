@@ -1529,7 +1529,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-04 07:50:00 PM EST';
+const BUILD_STAMP = '2026-05-05 09:15:00 AM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -4387,7 +4387,7 @@ function renderProjectList() {
   });
 }
 
-function buildExecutionSection(p) {
+function buildExecutionSection(p, apMode) {
   const sponsorGroups = execConfig['execution_sponsor_groups'] || [];
   const platforms = execConfig['execution_platforms'] || [];
   const priorities = execConfig['execution_priorities'] || [];
@@ -4395,6 +4395,8 @@ function buildExecutionSection(p) {
   const statuses = execConfig['execution_statuses'] || [];
   const people = execConfig['execution_people'] || [];
   const owners = p.execution_owners || [];
+  const saveFn = apMode ? 'saveExecFieldAp' : 'saveExecField';
+  const ownerFn = apMode ? 'toggleExecOwnerAp' : 'toggleExecOwner';
 
   function optList(values, current) {
     return `<option value="">—</option>` + values.map(v =>
@@ -4405,24 +4407,24 @@ function buildExecutionSection(p) {
   const ownerChecks = people.map(name => {
     const checked = owners.includes(name) ? 'checked' : '';
     return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:3px 0;cursor:pointer;">
-      <input type="checkbox" ${checked} style="width:auto;accent-color:#1a1a1a;" onchange="toggleExecOwner('${p.id}','${escapeHtml(name)}',this.checked)">
+      <input type="checkbox" ${checked} style="width:auto;accent-color:#1a1a1a;" onchange="${ownerFn}('${p.id}','${escapeHtml(name)}',this.checked)">
       ${escapeHtml(name)}
     </label>`;
   }).join('');
 
   return `
-    <div style="border-top:2px solid #e5e5e5;margin:12px 0;padding-top:12px;">
+    <div style="${apMode ? '' : 'border-top:2px solid #e5e5e5;margin:12px 0;padding-top:12px;'}">
       <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Execution tracking</div>
       <div class="proj-detail-grid" style="margin-bottom:12px;">
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Sponsor group</label>
-          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_sponsor_group',this.value)">
+          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_sponsor_group',this.value)">
             ${optList(sponsorGroups, p.execution_sponsor_group)}
           </select>
         </div>
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Platform</label>
-          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_platform',this.value)">
+          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_platform',this.value)">
             ${optList(platforms, p.execution_platform)}
           </select>
         </div>
@@ -4430,25 +4432,25 @@ function buildExecutionSection(p) {
       <div class="proj-detail-grid" style="margin-bottom:12px;">
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Priority</label>
-          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_priority',this.value)">
+          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_priority',this.value)">
             ${optList(priorities, p.execution_priority)}
           </select>
         </div>
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">ETA</label>
-          <input type="date" style="font-size:13px;" value="${p.execution_eta || ''}" onchange="saveExecField('${p.id}','execution_eta',this.value || null)">
+          <input type="date" style="font-size:13px;" value="${p.execution_eta || ''}" onchange="${saveFn}('${p.id}','execution_eta',this.value || null)">
         </div>
       </div>
       <div class="proj-detail-grid" style="margin-bottom:12px;">
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Lifecycle</label>
-          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_lifecycle',this.value)">
+          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_lifecycle',this.value)">
             ${optList(lifecycleStages, p.execution_lifecycle)}
           </select>
         </div>
         <div>
           <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Execution status</label>
-          <select style="font-size:13px;" onchange="saveExecField('${p.id}','execution_status',this.value)">
+          <select style="font-size:13px;" onchange="${saveFn}('${p.id}','execution_status',this.value)">
             ${optList(statuses, p.execution_status)}
           </select>
         </div>
@@ -5674,19 +5676,24 @@ function renderActiveProjects() {
     const date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'}) : '';
     const eta = p.execution_eta ? new Date(p.execution_eta + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
     return `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3;cursor:pointer;" onclick="toggleProjectDetail('${p.id}')">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name||'Untitled')}</div>
-          <div style="font-size:11px;color:#aaa;margin-top:2px;">${escapeHtml(customer)}${rep ? ' · '+escapeHtml(rep) : ''} · ${date}</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3;cursor:pointer;" onclick="toggleApDetail('${p.id}')">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name||'Untitled')}</div>
+            <div style="font-size:11px;color:#aaa;margin-top:2px;">${escapeHtml(customer)}${rep ? ' · '+escapeHtml(rep) : ''} · ${date}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+            <div style="width:90px;font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.execution_platform||'')}</div>
+            <div style="width:80px;">${pill(p.execution_priority, priorityColors)}</div>
+            <div style="width:90px;">${pill(p.execution_lifecycle, lifecycleColors)}</div>
+            <div style="width:88px;">${pill(p.execution_status, statusColors)}</div>
+            <div style="width:52px;font-size:11px;color:#aaa;text-align:right;">${eta}</div>
+            <div style="width:72px;text-align:right;">${ownerAvatars(p.execution_owners)}</div>
+            <div id="ap-chev-${p.id}" style="color:#ccc;font-size:16px;transition:transform 0.15s;">›</div>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-          <div style="width:90px;font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.execution_platform||'')}</div>
-          <div style="width:80px;">${pill(p.execution_priority, priorityColors)}</div>
-          <div style="width:90px;">${pill(p.execution_lifecycle, lifecycleColors)}</div>
-          <div style="width:88px;">${pill(p.execution_status, statusColors)}</div>
-          <div style="width:52px;font-size:11px;color:#aaa;text-align:right;">${eta}</div>
-          <div style="width:72px;text-align:right;">${ownerAvatars(p.execution_owners)}</div>
-          <div style="color:#ccc;font-size:16px;">›</div>
+        <div id="ap-detail-${p.id}" style="display:none;padding:12px 0 16px;border-bottom:1px solid #e5e5e5;">
+          ${buildExecutionSection(p)}
         </div>
       </div>
     `;
@@ -5719,6 +5726,33 @@ function clearActiveProjectsFilters() {
     if (el) el.value = '';
   });
   renderActiveProjects();
+}
+
+function toggleApDetail(id) {
+  const panel = document.getElementById('ap-detail-' + id);
+  const chev = document.getElementById('ap-chev-' + id);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (chev) chev.style.transform = isOpen ? '' : 'rotate(90deg)';
+}
+
+async function saveExecFieldAp(projectId, dbField, value) {
+  await saveExecField(projectId, dbField, value);
+  refreshApRow(projectId);
+}
+
+async function toggleExecOwnerAp(projectId, name, checked) {
+  await toggleExecOwner(projectId, name, checked);
+  refreshApRow(projectId);
+}
+
+function refreshApRow(projectId) {
+  // Re-render just the detail panel to reflect saved changes in the row pills
+  // Full re-render would close the panel, so we just update the detail content
+  const p = projects.find(x => x.id == projectId);
+  const panel = document.getElementById('ap-detail-' + projectId);
+  if (p && panel) panel.innerHTML = buildExecutionSection(p, true);
 }
 
 /* ── SETTINGS BACKUP ── */

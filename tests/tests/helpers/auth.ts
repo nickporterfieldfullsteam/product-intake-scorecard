@@ -41,6 +41,21 @@ export async function signOut(page: Page) {
 }
 
 /**
+ * Wait for post-reload auth init to settle. Reloading after sign-in goes
+ * through getSession() → handleSignedIn() → init() asynchronously, and
+ * init()'s showTab('tracker') will override any tab the test navigates to
+ * if called too early. Wait for currentUser + reps array to be populated.
+ */
+async function waitForInitSettled(page: Page) {
+  await page.waitForFunction(
+    () => (window as any).currentUser !== null
+       && Array.isArray((window as any).reps),
+    null,
+    { timeout: 15_000 }
+  );
+}
+
+/**
  * Navigate to the Editor tab (where criteria + detail fields are configured).
  * Flow: click gear → drawer opens → click "Edit criteria" → drawer closes,
  * #tab-editor becomes active.
@@ -82,13 +97,13 @@ export async function openSettingsTab(page: Page) {
  * entries before clicking the tab. This guards against the race where
  * loadReps() hasn't resolved yet by the time we navigate.
  *
- * Also waits for init()'s setTimeout(() => showTab('tracker'), 0) to have
- * fired first — without this, clicking the Reps tab can be overridden by
- * the deferred showTab('tracker') call, leaving #tab-submitters hidden.
+ * Also waits for post-reload auth init to settle — without this, init()'s
+ * showTab('tracker') can fire AFTER the test clicks the Reps tab,
+ * overriding the navigation.
  */
 export async function openRepsTab(page: Page, expectedRepCount?: number) {
-  // Wait for init to settle — the deferred showTab('tracker') must fire first
-  await page.locator('#tab-tracker').waitFor({ state: 'visible', timeout: 10_000 });
+  // Wait for post-reload init to settle (currentUser + reps array populated)
+  await waitForInitSettled(page);
 
   if (typeof expectedRepCount === 'number') {
     await page.waitForFunction(

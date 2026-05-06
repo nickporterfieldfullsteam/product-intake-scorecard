@@ -1529,7 +1529,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-05 09:30:35 PM EST';
+const BUILD_STAMP = '2026-05-05 09:38:28 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5860,13 +5860,13 @@ function renderActiveProjects() {
             <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name||'Untitled')}</div>
             <div style="font-size:11px;color:#aaa;margin-top:2px;">${escapeHtml(customer)}${rep ? ' · '+escapeHtml(rep) : ''} · ${date}</div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-            <div style="min-width:80px;">${pill(p.execution_platform, 'execution_platforms')}</div>
-            <div style="min-width:80px;">${pill(p.execution_priority, 'execution_priorities')}</div>
-            <div style="min-width:80px;">${pill(p.execution_lifecycle, 'execution_lifecycle_stages')}</div>
-            <div style="min-width:80px;">${pill(p.execution_status, 'execution_statuses')}</div>
+          <div style="display:flex;align-items:center;gap:0;flex-shrink:0;">
+            <div style="width:110px;text-align:center;">${pill(p.execution_platform, 'execution_platforms')}</div>
+            <div style="width:110px;text-align:center;">${pill(p.execution_priority, 'execution_priorities')}</div>
+            <div style="width:110px;text-align:center;">${pill(p.execution_lifecycle, 'execution_lifecycle_stages')}</div>
+            <div style="width:100px;text-align:center;">${pill(p.execution_status, 'execution_statuses')}</div>
             <div style="width:52px;font-size:11px;color:#aaa;text-align:right;">${eta}</div>
-            <div style="width:72px;text-align:right;">${ownerAvatars(p.execution_owners)}</div>
+            <div style="width:50px;text-align:right;">${ownerAvatars(p.execution_owners)}</div>
             <div id="ap-chev-${p.id}" style="color:#ccc;font-size:16px;transition:transform 0.15s;">›</div>
           </div>
         </div>

@@ -41,21 +41,6 @@ export async function signOut(page: Page) {
 }
 
 /**
- * Wait for post-reload auth init to settle. Reloading after sign-in goes
- * through getSession() → handleSignedIn() → init() asynchronously, and
- * init()'s showTab('tracker') will override any tab the test navigates to
- * if called too early. Wait for currentUser + reps array to be populated.
- */
-async function waitForInitSettled(page: Page) {
-  await page.waitForFunction(
-    () => (window as any).currentUser !== null
-       && Array.isArray((window as any).reps),
-    null,
-    { timeout: 15_000 }
-  );
-}
-
-/**
  * Navigate to the Editor tab (where criteria + detail fields are configured).
  * Flow: click gear → drawer opens → click "Edit criteria" → drawer closes,
  * #tab-editor becomes active.
@@ -90,21 +75,33 @@ export async function openSettingsTab(page: Page) {
 }
 
 /**
+ * Reload the page and wait for the full auth + init cycle to complete.
+ * After reload, Supabase's getSession() fires → handleSignedIn() → init()
+ * → showTab('tracker'). We must wait for this entire chain before any
+ * tab navigation, otherwise init()'s showTab('tracker') will override
+ * whatever tab the test navigates to.
+ *
+ * The definitive signal is the 'Post-auth init complete' console log,
+ * which fires at the end of handleSignedIn() after init() returns.
+ */
+export async function reloadAndWaitForInit(page: Page) {
+  // Set up the listener BEFORE reload so we don't miss the event
+  const initComplete = page.waitForEvent('console', {
+    predicate: msg => msg.text().includes('Post-auth init complete'),
+    timeout: 15_000,
+  });
+  await page.reload();
+  await initComplete;
+}
+
+/**
  * Navigate to the Reps tab. Internal tab id is still tab-submitters
  * (renamed display-only in C.3.a); the button id is tab-btn-submitters.
  *
  * If expectedRepCount is provided, waits for window.reps to have that many
- * entries before clicking the tab. This guards against the race where
- * loadReps() hasn't resolved yet by the time we navigate.
- *
- * Also waits for post-reload auth init to settle — without this, init()'s
- * showTab('tracker') can fire AFTER the test clicks the Reps tab,
- * overriding the navigation.
+ * entries before clicking the tab.
  */
 export async function openRepsTab(page: Page, expectedRepCount?: number) {
-  // Wait for post-reload init to settle (currentUser + reps array populated)
-  await waitForInitSettled(page);
-
   if (typeof expectedRepCount === 'number') {
     await page.waitForFunction(
       (n) => Array.isArray((window as any).reps) && (window as any).reps.length === n,

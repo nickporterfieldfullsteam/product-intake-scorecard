@@ -81,8 +81,15 @@ export async function openSettingsTab(page: Page) {
  * If expectedRepCount is provided, waits for window.reps to have that many
  * entries before clicking the tab. This guards against the race where
  * loadReps() hasn't resolved yet by the time we navigate.
+ *
+ * Also waits for init()'s setTimeout(() => showTab('tracker'), 0) to have
+ * fired first — without this, clicking the Reps tab can be overridden by
+ * the deferred showTab('tracker') call, leaving #tab-submitters hidden.
  */
 export async function openRepsTab(page: Page, expectedRepCount?: number) {
+  // Wait for init to settle — the deferred showTab('tracker') must fire first
+  await page.locator('#tab-tracker').waitFor({ state: 'visible', timeout: 10_000 });
+
   if (typeof expectedRepCount === 'number') {
     await page.waitForFunction(
       (n) => Array.isArray((window as any).reps) && (window as any).reps.length === n,
@@ -91,7 +98,7 @@ export async function openRepsTab(page: Page, expectedRepCount?: number) {
     );
   }
   await page.locator('#tab-btn-submitters').click();
-  await page.locator('#tab-submitters').waitFor({ state: 'visible' });
+  await page.locator('#tab-submitters').waitFor({ state: 'visible', timeout: 10_000 });
 }
 
 /**

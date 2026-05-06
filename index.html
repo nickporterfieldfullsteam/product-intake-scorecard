@@ -1529,7 +1529,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-05 09:30:00 PM EST';
+const BUILD_STAMP = '2026-05-05 09:26:11 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -4375,7 +4375,7 @@ function renderProjectList() {
           <summary style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;padding:4px 0;user-select:none;list-style:none;display:flex;align-items:center;gap:6px;"><span style="font-size:10px;">▶</span> Scoring criteria</summary>
           <div style="margin-top:4px;">${criteriaRows}</div>
         </details>` : ''}
-        ${status === 'Accepted' ? buildExecutionSection(p) : ''}
+        ${status === 'Accepted' ? '<div style="border-top:1px solid #e5e5e5;margin:12px 0;padding-top:8px;"><p style="font-size:12px;color:#888;">Manage execution tracking for this project in the <a href="#" onclick="event.preventDefault();showTab(\'active-projects\')" style="color:#185FA5;">Active Projects</a> tab.</p></div>' : ''}
         <div class="btn-row">
           <button class="btn-primary" style="font-size:12px;padding:6px 14px;" data-draft-save="${p.id}" disabled onclick="saveDraft('${p.id}')">Save</button>
           <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="autoSaveThen('${p.id}', () => editProject('${p.id}'))">Edit &amp; re-score</button>
@@ -4475,19 +4475,26 @@ function buildExecutionSection(p, apMode) {
 async function saveExecDraft(projectId, uid, apMode) {
   const p = projects.find(x => x.id == projectId);
   if (!p) return;
+  const sg = document.getElementById('exec-sg-'+uid);
+  const pl = document.getElementById('exec-pl-'+uid);
+  const pr = document.getElementById('exec-pr-'+uid);
+  const eta = document.getElementById('exec-eta-'+uid);
+  const lc = document.getElementById('exec-lc-'+uid);
+  const es = document.getElementById('exec-es-'+uid);
+  if (!sg && !pl && !pr && !eta && !lc && !es) { console.error('[saveExecDraft] No fields found for uid:', uid); toast('Error: fields not found.'); return; }
   const fields = {
-    execution_sponsor_group: document.getElementById('exec-sg-'+uid)?.value || null,
-    execution_platform:      document.getElementById('exec-pl-'+uid)?.value || null,
-    execution_priority:      document.getElementById('exec-pr-'+uid)?.value || null,
-    execution_eta:           document.getElementById('exec-eta-'+uid)?.value || null,
-    execution_lifecycle:     document.getElementById('exec-lc-'+uid)?.value || null,
-    execution_status:        document.getElementById('exec-es-'+uid)?.value || null,
+    execution_sponsor_group: sg?.value || null,
+    execution_platform:      pl?.value || null,
+    execution_priority:      pr?.value || null,
+    execution_eta:           eta?.value || null,
+    execution_lifecycle:     lc?.value || null,
+    execution_status:        es?.value || null,
   };
   // Update in-memory
   Object.assign(p, fields);
   // Batch save to DB
-  await _sb.from('projects').update(fields).eq('id', projectId);
-  if (apMode) renderActiveProjects();
+  const { error } = await _sb.from('projects').update(fields).eq('id', projectId);
+  if (error) { console.error('[saveExecDraft] DB error:', error); toast('Error saving.'); return; }
   toast('Saved.');
 }
 
@@ -5848,7 +5855,7 @@ function renderActiveProjects() {
             <div style="font-size:11px;color:#aaa;margin-top:2px;">${escapeHtml(customer)}${rep ? ' · '+escapeHtml(rep) : ''} · ${date}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-            <div style="width:90px;font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.execution_platform||'')}</div>
+            <div style="min-width:80px;">${pill(p.execution_platform, 'execution_platforms')}</div>
             <div style="min-width:80px;">${pill(p.execution_priority, 'execution_priorities')}</div>
             <div style="min-width:80px;">${pill(p.execution_lifecycle, 'execution_lifecycle_stages')}</div>
             <div style="min-width:80px;">${pill(p.execution_status, 'execution_statuses')}</div>

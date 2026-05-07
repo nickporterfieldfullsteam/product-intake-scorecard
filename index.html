@@ -1567,7 +1567,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-06 08:53:25 PM EST';
+const BUILD_STAMP = '2026-05-07 08:55:44 AM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -4446,16 +4446,18 @@ function buildExecutionSection(p, apMode) {
     return `<span style="display:inline-flex;align-items:center;gap:4px;background:#f5f5f3;border:1px solid #e5e5e5;border-radius:20px;padding:3px 8px 3px 4px;font-size:12px;">
       <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#EEEDFE;color:#534AB7;font-size:8px;font-weight:500;">${initials}</span>
       ${escapeHtml(name)}
-      <span onclick="removeExecOwnerChip('${p.id}','${escapeHtml(name)}',${apMode ? 'true' : 'false'})" style="cursor:pointer;color:#aaa;font-size:14px;line-height:1;margin-left:2px;">×</span>
+      <span onclick="removeExecOwnerChip('${p.id}','${escapeHtml(name)}',${apMode ? 'true' : 'false'},'${uid}')" style="cursor:pointer;color:#aaa;font-size:14px;line-height:1;margin-left:2px;">×</span>
     </span>`;
   }).join(' ');
 
   const availablePeople = people.filter(n => !owners.includes(n));
   const ownerDropdown = availablePeople.length ? `
-    <select style="font-size:12px;width:auto;padding:3px 7px;" onchange="addExecOwnerChip('${p.id}',this.value,${apMode ? 'true' : 'false'});this.value='';">
+    <select style="font-size:12px;width:auto;padding:3px 7px;" onchange="addExecOwnerChip('${p.id}',this.value,${apMode ? 'true' : 'false'},'${uid}');this.value='';">
       <option value="">+ Add owner…</option>
       ${availablePeople.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
     </select>` : '';
+
+  const ownerHiddenInput = `<input type="hidden" id="exec-ow-${uid}" value='${JSON.stringify(owners).replace(/'/g,"&#39;")}'>`;
 
   return `
     <div style="${apMode ? '' : 'border-top:2px solid #e5e5e5;margin:12px 0;padding-top:12px;'}">
@@ -4502,7 +4504,7 @@ function buildExecutionSection(p, apMode) {
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Owners</label>
-        ${people.length ? `<div id="exec-owners-${uid}" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${ownerChips}${ownerDropdown}</div>` : '<p style="font-size:12px;color:#bbb;font-style:italic;">No people configured yet. Add them in ⚙ → Active Projects config.</p>'}
+        ${people.length ? `${ownerHiddenInput}<div id="exec-owners-${uid}" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${ownerChips}${ownerDropdown}</div>` : '<p style="font-size:12px;color:#bbb;font-style:italic;">No people configured yet. Add them in ⚙ → Active Projects config.</p>'}
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
         <button style="font-family:inherit;font-size:13px;padding:6px 18px;border:1px solid #1a1a1a;border-radius:8px;background:#1a1a1a;color:#fff;cursor:pointer;" onclick="saveExecDraft('${p.id}','${uid}',${apMode ? 'true' : 'false'})">Save changes</button>
@@ -4520,6 +4522,9 @@ async function saveExecDraft(projectId, uid, apMode) {
   const lc = document.getElementById('exec-lc-'+uid);
   const es = document.getElementById('exec-es-'+uid);
   if (!sg && !pl && !pr && !eta && !lc && !es) { console.error('[saveExecDraft] No fields found for uid:', uid); toast('Error: fields not found.'); return; }
+  // Read draft owners from the hidden input
+  const ownersInput = document.getElementById('exec-ow-'+uid);
+  const draftOwners = ownersInput ? JSON.parse(ownersInput.value || '[]') : (p.execution_owners || []);
   const fields = {
     execution_sponsor_group: sg?.value || null,
     execution_platform:      pl?.value || null,
@@ -4527,6 +4532,7 @@ async function saveExecDraft(projectId, uid, apMode) {
     execution_eta:           eta?.value || null,
     execution_lifecycle:     lc?.value || null,
     execution_status:        es?.value || null,
+    execution_owners:        draftOwners,
   };
   // Update in-memory
   Object.assign(p, fields);
@@ -4542,40 +4548,44 @@ async function saveExecDraft(projectId, uid, apMode) {
   toast('Saved.');
 }
 
-function addExecOwnerChip(projectId, name, apMode) {
+function addExecOwnerChip(projectId, name, apMode, uid) {
   if (!name) return;
-  const p = projects.find(x => x.id == projectId);
-  if (!p) return;
-  const owners = [...(p.execution_owners || [])];
-  if (!owners.includes(name)) owners.push(name);
-  p.execution_owners = owners;
-  sbUpdateProjectField(projectId, 'execution_owners', owners);
-  // Re-render the section
-  if (apMode) {
-    const panel = document.getElementById('ap-detail-' + projectId);
-    if (panel) panel.innerHTML = buildExecutionSection(p, true);
-  } else {
-    const panel = document.getElementById('proj-detail-' + projectId);
-    if (panel) {
-      const execDiv = panel.querySelector('[data-exec-section]');
-      if (execDiv) execDiv.outerHTML = buildExecutionSection(p, false).replace('<div style="border-top', '<div data-exec-section style="border-top');
-    }
-  }
+  const ownersInput = document.getElementById('exec-ow-'+uid);
+  if (!ownersInput) return;
+  const owners = JSON.parse(ownersInput.value || '[]');
+  if (owners.includes(name)) return;
+  owners.push(name);
+  ownersInput.value = JSON.stringify(owners);
+  rebuildOwnerChipsUI(uid, owners, projectId, apMode);
 }
 
-function removeExecOwnerChip(projectId, name, apMode) {
-  const p = projects.find(x => x.id == projectId);
-  if (!p) return;
-  const owners = (p.execution_owners || []).filter(o => o !== name);
-  p.execution_owners = owners;
-  sbUpdateProjectField(projectId, 'execution_owners', owners);
-  if (apMode) {
-    const panel = document.getElementById('ap-detail-' + projectId);
-    if (panel) panel.innerHTML = buildExecutionSection(p, true);
-  } else {
-    // Re-render entire tracker detail is simplest
-    renderTracker();
-  }
+function removeExecOwnerChip(projectId, name, apMode, uid) {
+  const ownersInput = document.getElementById('exec-ow-'+uid);
+  if (!ownersInput) return;
+  const owners = JSON.parse(ownersInput.value || '[]').filter(o => o !== name);
+  ownersInput.value = JSON.stringify(owners);
+  rebuildOwnerChipsUI(uid, owners, projectId, apMode);
+}
+
+function rebuildOwnerChipsUI(uid, owners, projectId, apMode) {
+  const container = document.getElementById('exec-owners-'+uid);
+  if (!container) return;
+  const people = execConfig['execution_people'] || [];
+  const chips = owners.map(name => {
+    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    return `<span style="display:inline-flex;align-items:center;gap:4px;background:#f5f5f3;border:1px solid #e5e5e5;border-radius:20px;padding:3px 8px 3px 4px;font-size:12px;">
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#EEEDFE;color:#534AB7;font-size:8px;font-weight:500;">${initials}</span>
+      ${escapeHtml(name)}
+      <span onclick="removeExecOwnerChip('${projectId}','${escapeHtml(name)}',${apMode},'${uid}')" style="cursor:pointer;color:#aaa;font-size:14px;line-height:1;margin-left:2px;">×</span>
+    </span>`;
+  }).join(' ');
+  const available = people.filter(n => !owners.includes(n));
+  const dropdown = available.length ? `
+    <select style="font-size:12px;width:auto;padding:3px 7px;" onchange="addExecOwnerChip('${projectId}',this.value,${apMode},'${uid}');this.value='';">
+      <option value="">+ Add owner…</option>
+      ${available.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
+    </select>` : '';
+  container.innerHTML = chips + dropdown;
 }
 
 // Legacy wrappers kept for backward compat (intake detail panel)

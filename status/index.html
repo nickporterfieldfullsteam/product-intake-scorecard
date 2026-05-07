@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Status Board — Arbiter</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #F5F4F0;
+      --card-bg: #FFFFFF;
+      --border: #E5E5E3;
+      --text-primary: #1A1A1A;
+      --text-secondary: #888888;
+      --text-tertiary: #AAAAAA;
+      --col-header-bg: #F0EFEB;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text-primary); }
+
+    /* Header */
+    .header { padding: 24px 32px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-logo { display: flex; align-items: center; gap: 8px; }
+    .header-logo svg { width: 28px; height: 28px; }
+    .header-title { font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
+    .header-sub { font-size: 13px; color: var(--text-secondary); }
+    .header-meta { font-size: 12px; color: var(--text-tertiary); text-align: right; }
+
+    /* Filter bar */
+    .filter-bar { padding: 0 32px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-bar select { font-size: 12px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text-secondary); font-family: inherit; }
+
+    /* Board */
+    .board { display: flex; gap: 12px; padding: 0 32px 32px; overflow-x: auto; min-height: 300px; }
+    .board-col { flex: 1; min-width: 240px; }
+    .board-col-header { font-size: 11px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-secondary); padding: 8px 12px; background: var(--col-header-bg); border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+    .board-count { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 1px 7px; font-size: 11px; color: var(--text-tertiary); }
+    .board-empty { font-size: 12px; color: var(--text-tertiary); padding: 16px 12px; text-align: center; font-style: italic; }
+
+    /* Cards */
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+    .card-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+    .card-meta { font-size: 11px; color: var(--text-tertiary); margin-bottom: 8px; }
+    .card-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+    .card-eta { font-size: 11px; color: var(--text-secondary); }
+
+    /* Pills */
+    .pill { display: inline-flex; align-items: center; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
+
+    /* Owner avatars */
+    .avatar { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 8px; font-weight: 500; margin-right: 2px; }
+
+    /* Error / loading states */
+    .state-message { text-align: center; padding: 80px 32px; }
+    .state-message h2 { font-size: 18px; font-weight: 500; margin-bottom: 8px; }
+    .state-message p { font-size: 14px; color: var(--text-secondary); }
+    .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 700px) {
+      .header { padding: 16px; }
+      .filter-bar { padding: 0 16px 12px; }
+      .board { padding: 0 16px 24px; flex-direction: column; }
+      .board-col { min-width: unset; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading" class="state-message">
+  <div class="spinner"></div>
+  <p>Loading project status…</p>
+</div>
+
+<div id="invalid" class="state-message" style="display:none;">
+  <h2>Invalid or expired link</h2>
+  <p>This status board link is no longer valid. Please request an updated link from your project manager.</p>
+</div>
+
+<div id="app" style="display:none;">
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 32L20 8L32 32H8Z" fill="#1a1a1a"/>
+          <path d="M14 32L20 18L26 32H14Z" fill="#2DB67D"/>
+        </svg>
+        <span class="header-title">Project Status</span>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div id="board-updated"></div>
+      <div id="board-count"></div>
+    </div>
+  </div>
+
+  <div class="filter-bar" id="filter-bar">
+    <select id="filter-platform" onchange="renderBoard()"><option value="">All platforms</option></select>
+    <select id="filter-status" onchange="renderBoard()"><option value="">All statuses</option></select>
+    <select id="filter-priority" onchange="renderBoard()"><option value="">All priorities</option></select>
+  </div>
+
+  <div class="board" id="board"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let allProjects = [];
+let lifecycleStages = ['Planning', 'Development', 'Testing', 'Releasing']; // default fallback
+
+// Avatar color palette
+const AVATAR_COLORS = ['#EEEDFE|#534AB7','#E1F5EE|#0F6E56','#FAECE7|#993C1D','#E6F1FB|#185FA5','#FCE8F3|#9B2C6B'];
+
+// Default pill color
+const DEFAULT_PILL = { bg: '#F1EFE8', color: '#5F5E5A' };
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+
+  if (!token) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('invalid').style.display = 'block';
+    return;
+  }
+
+  // Validate token
+  const { data: valid, error: valErr } = await _sb.rpc('validate_status_board_token', { p_token: token });
+  if (valErr || !valid) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('invalid').style.display = 'block';
+    return;
+  }
+
+  // Fetch projects
+  const { data: projects, error: projErr } = await _sb.rpc('get_status_board_projects', { p_token: token });
+  if (projErr) {
+    console.error('Failed to load projects:', projErr);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('invalid').style.display = 'block';
+    return;
+  }
+
+  allProjects = projects || [];
+
+  // Try to load workspace config for lifecycle stages and pill colors
+  // This uses the same token-based RPC approach — but we don't have an RPC for config.
+  // We'll derive lifecycle stages from the data itself + use defaults.
+  const stagesFromData = [...new Set(allProjects.map(p => p.execution_lifecycle).filter(Boolean))];
+  if (stagesFromData.length) {
+    // Preserve default order for known stages, append unknown ones
+    const known = ['Planning', 'Development', 'Testing', 'Releasing'];
+    const ordered = known.filter(s => stagesFromData.includes(s));
+    const extra = stagesFromData.filter(s => !known.includes(s));
+    lifecycleStages = [...ordered, ...extra];
+  }
+
+  populateFilters();
+  renderBoard();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('board-updated').textContent = 'Updated ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function populateFilters() {
+  const platforms = [...new Set(allProjects.map(p => p.execution_platform).filter(Boolean))].sort();
+  const statuses = [...new Set(allProjects.map(p => p.execution_status).filter(Boolean))].sort();
+  const priorities = [...new Set(allProjects.map(p => p.execution_priority).filter(Boolean))].sort();
+
+  fillSelect('filter-platform', platforms, 'All platforms');
+  fillSelect('filter-status', statuses, 'All statuses');
+  fillSelect('filter-priority', priorities, 'All priorities');
+}
+
+function fillSelect(id, values, defaultLabel) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = `<option value="">${defaultLabel}</option>` +
+    values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+}
+
+function getFiltered() {
+  const fPlatform = document.getElementById('filter-platform')?.value || '';
+  const fStatus = document.getElementById('filter-status')?.value || '';
+  const fPriority = document.getElementById('filter-priority')?.value || '';
+  return allProjects.filter(p => {
+    if (fPlatform && p.execution_platform !== fPlatform) return false;
+    if (fStatus && p.execution_status !== fStatus) return false;
+    if (fPriority && p.execution_priority !== fPriority) return false;
+    return true;
+  });
+}
+
+function renderBoard() {
+  const filtered = getFiltered();
+  const board = document.getElementById('board');
+  if (!board) return;
+
+  document.getElementById('board-count').textContent = filtered.length + ' active project' + (filtered.length !== 1 ? 's' : '');
+
+  // Group by lifecycle stage; include empty columns for all known stages
+  board.innerHTML = lifecycleStages.map(stage => {
+    const stageProjects = filtered.filter(p => p.execution_lifecycle === stage);
+    // Also include projects with no lifecycle in the first column
+    return `
+      <div class="board-col">
+        <div class="board-col-header">
+          ${escapeHtml(stage)}
+          <span class="board-count">${stageProjects.length}</span>
+        </div>
+        ${stageProjects.length ? stageProjects.map(renderCard).join('') : '<div class="board-empty">No projects</div>'}
+      </div>
+    `;
+  }).join('');
+
+  // Unassigned column for projects with no lifecycle
+  const unassigned = filtered.filter(p => !p.execution_lifecycle);
+  if (unassigned.length) {
+    board.innerHTML += `
+      <div class="board-col">
+        <div class="board-col-header">
+          Unassigned
+          <span class="board-count">${unassigned.length}</span>
+        </div>
+        ${unassigned.map(renderCard).join('')}
+      </div>
+    `;
+  }
+}
+
+function renderCard(p) {
+  const eta = p.execution_eta ? new Date(p.execution_eta + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const sponsorGroup = p.execution_sponsor_group || '';
+  const platform = p.execution_platform || '';
+  const metaParts = [sponsorGroup, platform].filter(Boolean);
+
+  return `
+    <div class="card">
+      <div class="card-name">${escapeHtml(p.name)}</div>
+      ${metaParts.length ? `<div class="card-meta">${escapeHtml(metaParts.join(' · '))}</div>` : ''}
+      <div class="card-pills">
+        ${p.execution_priority ? makePill(p.execution_priority) : ''}
+        ${p.execution_status ? makePill(p.execution_status) : ''}
+      </div>
+      <div class="card-footer">
+        <div class="card-eta">${eta ? 'ETA ' + eta : ''}</div>
+        <div>${renderOwnerAvatars(p.execution_owners)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function makePill(label) {
+  // Simple color mapping based on known values
+  const colorMap = {
+    'Normal':         { bg: '#F1EFE8', color: '#5F5E5A' },
+    'On Track':       { bg: '#E1F5EE', color: '#0F6E56' },
+    'Not Started':    { bg: '#F1EFE8', color: '#5F5E5A' },
+    'Needs Info':     { bg: '#E6F1FB', color: '#185FA5' },
+    'On Hold':        { bg: '#F1EFE8', color: '#5F5E5A' },
+    'At Risk':        { bg: '#FAEEDA', color: '#854F0B' },
+    'Blocked':        { bg: '#FCEBEB', color: '#A32D2D' },
+  };
+  // For priority, check for keywords
+  let c = colorMap[label];
+  if (!c) {
+    const lower = label.toLowerCase();
+    if (lower.includes('critical') || lower.includes('asap')) c = { bg: '#FCEBEB', color: '#A32D2D' };
+    else if (lower.includes('high')) c = { bg: '#FAECE7', color: '#993C1D' };
+    else c = DEFAULT_PILL;
+  }
+  return `<span class="pill" style="background:${c.bg};color:${c.color};">${escapeHtml(label)}</span>`;
+}
+
+function renderOwnerAvatars(owners) {
+  if (!owners?.length) return '';
+  return owners.slice(0, 3).map((o, i) => {
+    const [bg, col] = AVATAR_COLORS[i % AVATAR_COLORS.length].split('|');
+    const initials = o.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    return `<span class="avatar" title="${escapeHtml(o)}" style="background:${bg};color:${col};">${initials}</span>`;
+  }).join('') + (owners.length > 3 ? `<span style="font-size:11px;color:var(--text-tertiary);">+${owners.length - 3}</span>` : '');
+}
+
+init();
+</script>
+</body>
+</html>

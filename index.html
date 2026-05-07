@@ -408,11 +408,49 @@
   </div>
 
   <div class="tabs" id="main-tabs">
+    <button class="tab" onclick="showTab('dashboard')" id="tab-btn-dashboard">Dashboard</button>
     <button class="tab" onclick="showTab('tracker')" id="tab-btn-tracker">Intake</button>
     <button class="tab" onclick="showTab('active-projects')" id="tab-btn-active-projects">Active Projects</button>
     <button class="tab" onclick="showTab('submitters')" id="tab-btn-submitters">Reps</button>
     <button class="tab" onclick="showTab('insights')" id="tab-btn-insights">Insights</button>
     <button class="tab" onclick="showTab('help')" id="tab-btn-help">Help</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="tab-panel">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;" id="dash-metrics"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="dash-grid">
+      <div class="section" style="margin-bottom:0;">
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Needs attention</span>
+          <span id="dash-attention-count" style="font-size:12px;color:#aaa;font-weight:400;"></span>
+        </div>
+        <div id="dash-attention-list" style="max-height:400px;overflow-y:auto;"></div>
+      </div>
+      <div class="section" style="margin-bottom:0;">
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Unreviewed submissions</span>
+          <span id="dash-unreviewed-count" style="font-size:12px;color:#aaa;font-weight:400;"></span>
+        </div>
+        <div id="dash-unreviewed-list" style="max-height:400px;overflow-y:auto;"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+      <div class="section" style="margin-bottom:0;">
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Overdue ETAs</span>
+          <span id="dash-overdue-count" style="font-size:12px;color:#aaa;font-weight:400;"></span>
+        </div>
+        <div id="dash-overdue-list" style="max-height:300px;overflow-y:auto;"></div>
+      </div>
+      <div class="section" style="margin-bottom:0;">
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Upcoming revisits (14 days)</span>
+          <span id="dash-revisit-count" style="font-size:12px;color:#aaa;font-weight:400;"></span>
+        </div>
+        <div id="dash-revisit-list" style="max-height:300px;overflow-y:auto;"></div>
+      </div>
+    </div>
   </div>
 
   <!-- INTAKE -->
@@ -1529,7 +1567,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-06 07:58:33 PM EST';
+const BUILD_STAMP = '2026-05-06 08:27:54 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5802,6 +5840,157 @@ async function regenerateStatusBoardToken() {
   toast('Token regenerated. Share the new link.');
 }
 
+/* ── DASHBOARD ── */
+
+function renderDashboard() {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const in14 = new Date(today.getTime() + 14 * 86400000);
+  const active = (projects || []).filter(p => p.status === 'Accepted' && !p.deleted_at);
+  const allLive = (projects || []).filter(p => !p.deleted_at);
+
+  // --- Metrics ---
+  const totalActive = active.length;
+  const unreviewed = allLive.filter(p => p.status === 'Submitted');
+  const atRisk = active.filter(p => p.execution_status === 'At Risk');
+  const blocked = active.filter(p => p.execution_status === 'Blocked');
+  const overdue = active.filter(p => {
+    if (!p.execution_eta) return false;
+    return new Date(p.execution_eta + 'T00:00:00') < today;
+  });
+  const upcoming = allLive.filter(p => {
+    if (!p.revisit_date) return false;
+    const rd = new Date(p.revisit_date + 'T00:00:00');
+    return rd >= today && rd <= in14;
+  });
+
+  const metricsEl = document.getElementById('dash-metrics');
+  if (metricsEl) {
+    metricsEl.innerHTML = [
+      dashMetric('Active projects', totalActive, '#1a1a1a'),
+      dashMetric('Unreviewed', unreviewed.length, unreviewed.length > 0 ? '#185FA5' : '#aaa'),
+      dashMetric('At risk', atRisk.length, atRisk.length > 0 ? '#854F0B' : '#aaa'),
+      dashMetric('Blocked', blocked.length, blocked.length > 0 ? '#A32D2D' : '#aaa'),
+      dashMetric('Overdue ETAs', overdue.length, overdue.length > 0 ? '#A32D2D' : '#aaa'),
+      dashMetric('Revisits (14d)', upcoming.length, upcoming.length > 0 ? '#534AB7' : '#aaa'),
+    ].join('');
+  }
+
+  // --- Needs attention (at risk + blocked) ---
+  const attention = [...blocked, ...atRisk];
+  const attEl = document.getElementById('dash-attention-list');
+  const attCount = document.getElementById('dash-attention-count');
+  if (attCount) attCount.textContent = attention.length ? attention.length + ' project' + (attention.length > 1 ? 's' : '') : '';
+  if (attEl) {
+    if (!attention.length) {
+      attEl.innerHTML = '<p style="font-size:13px;color:#aaa;font-style:italic;padding:8px 0;">All clear — no blocked or at-risk projects.</p>';
+    } else {
+      attEl.innerHTML = attention.map(p => dashRow(p, {
+        pill: p.execution_status,
+        pillCol: 'execution_statuses',
+        sub: p.execution_lifecycle ? `${p.execution_lifecycle}` : '',
+        action: `showTab('active-projects')`,
+      })).join('');
+    }
+  }
+
+  // --- Unreviewed submissions ---
+  const unrevEl = document.getElementById('dash-unreviewed-list');
+  const unrevCount = document.getElementById('dash-unreviewed-count');
+  if (unrevCount) unrevCount.textContent = unreviewed.length ? unreviewed.length + ' submission' + (unreviewed.length > 1 ? 's' : '') : '';
+  if (unrevEl) {
+    if (!unreviewed.length) {
+      unrevEl.innerHTML = '<p style="font-size:13px;color:#aaa;font-style:italic;padding:8px 0;">No pending submissions.</p>';
+    } else {
+      unrevEl.innerHTML = unreviewed.map(p => {
+        const customer = (p.lockedVals && p.lockedVals['__customer__']) || '';
+        const date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'}) : '';
+        const age = p.created_at ? Math.floor((now.getTime() - new Date(p.created_at).getTime()) / 86400000) : 0;
+        const ageLabel = age === 0 ? 'today' : age === 1 ? '1 day ago' : age + ' days ago';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f5f3;cursor:pointer;" onclick="showTab('tracker')">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name||'Untitled')}</div>
+            <div style="font-size:11px;color:#aaa;">${escapeHtml(customer)} · ${date}</div>
+          </div>
+          <div style="font-size:11px;color:${age > 3 ? '#A32D2D' : '#888'};">${ageLabel}</div>
+          <div style="color:#ccc;font-size:14px;">›</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // --- Overdue ETAs ---
+  const overdueEl = document.getElementById('dash-overdue-list');
+  const overdueCount = document.getElementById('dash-overdue-count');
+  if (overdueCount) overdueCount.textContent = overdue.length ? overdue.length + ' project' + (overdue.length > 1 ? 's' : '') : '';
+  if (overdueEl) {
+    if (!overdue.length) {
+      overdueEl.innerHTML = '<p style="font-size:13px;color:#aaa;font-style:italic;padding:8px 0;">No overdue ETAs.</p>';
+    } else {
+      overdueEl.innerHTML = overdue.map(p => {
+        const daysOver = Math.floor((today.getTime() - new Date(p.execution_eta + 'T00:00:00').getTime()) / 86400000);
+        const overLabel = daysOver === 1 ? '1 day overdue' : daysOver + ' days overdue';
+        return dashRow(p, {
+          pill: p.execution_lifecycle,
+          pillCol: 'execution_lifecycle_stages',
+          sub: overLabel,
+          subColor: '#A32D2D',
+          action: `showTab('active-projects')`,
+        });
+      }).join('');
+    }
+  }
+
+  // --- Upcoming revisits ---
+  const revisitEl = document.getElementById('dash-revisit-list');
+  const revisitCount = document.getElementById('dash-revisit-count');
+  if (revisitCount) revisitCount.textContent = upcoming.length ? upcoming.length + ' project' + (upcoming.length > 1 ? 's' : '') : '';
+  if (revisitEl) {
+    if (!upcoming.length) {
+      revisitEl.innerHTML = '<p style="font-size:13px;color:#aaa;font-style:italic;padding:8px 0;">No revisits in the next 14 days.</p>';
+    } else {
+      revisitEl.innerHTML = upcoming.map(p => {
+        const rd = new Date(p.revisit_date + 'T00:00:00');
+        const daysUntil = Math.floor((rd.getTime() - today.getTime()) / 86400000);
+        const rdLabel = daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : 'In ' + daysUntil + ' days';
+        const rdDate = rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f5f3;cursor:pointer;" onclick="showTab('tracker')">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name||'Untitled')}</div>
+            <div style="font-size:11px;color:#aaa;">${escapeHtml(p.tier || '')} · Score: ${p.score ?? '—'}</div>
+          </div>
+          <div style="font-size:11px;color:${daysUntil <= 2 ? '#A32D2D' : '#534AB7'};">${rdLabel} · ${rdDate}</div>
+          <div style="color:#ccc;font-size:14px;">›</div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+function dashMetric(label, value, color) {
+  return `<div style="flex:1;min-width:120px;background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 16px;">
+    <div style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(label)}</div>
+    <div style="font-size:24px;font-weight:600;color:${color};margin-top:4px;">${value}</div>
+  </div>`;
+}
+
+function dashRow(p, opts) {
+  const customer = (p.lockedVals && p.lockedVals['__customer__']) || '';
+  const pillHtml = opts.pill ? (() => {
+    const c = execPillColors(opts.pillCol, opts.pill);
+    return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px;background:${c.bg};color:${c.color};white-space:nowrap;">${escapeHtml(opts.pill)}</span>`;
+  })() : '';
+  const subHtml = opts.sub ? `<span style="font-size:11px;color:${opts.subColor || '#888'};margin-left:6px;">${escapeHtml(opts.sub)}</span>` : '';
+  return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f5f3;cursor:pointer;" onclick="${opts.action}">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name||'Untitled')}</div>
+      <div style="font-size:11px;color:#aaa;">${escapeHtml(customer)}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">${pillHtml}${subHtml}</div>
+    <div style="color:#ccc;font-size:14px;">›</div>
+  </div>`;
+}
+
 /* ── ACTIVE PROJECTS ── */
 
 function getActiveProjects() {
@@ -6509,21 +6698,22 @@ function showTab(tab) {
   // Remove back bar if present
   const bb = document.getElementById('config-back-bar');
   if (bb) bb.remove();
-  ['intake','tracker','active-projects','submitters','insights','weights','editor','help','settings','exec-config'].forEach(t => {
+  ['dashboard','intake','tracker','active-projects','submitters','insights','weights','editor','help','settings','exec-config'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.toggle('active', t === tab);
   });
   // Only highlight tabs that are in the main nav
-  const navTabs = ['tracker','active-projects','submitters','insights','help'];
+  const navTabs = ['dashboard','tracker','active-projects','submitters','insights','help'];
   const navTabEls = document.querySelectorAll('#main-tabs .tab');
   navTabEls.forEach((el, i) => {
     if (el) el.classList.toggle('active', navTabs[i] === tab);
   });
   // Show FAB on intake tabs, hide on intake form
   const fab = document.getElementById('new-request-fab');
-  const fabTabs = ['tracker','active-projects','submitters','insights','help'];
+  const fabTabs = ['dashboard','tracker','active-projects','submitters','insights','help'];
   if (fab) fab.style.display = fabTabs.includes(tab) ? 'flex' : 'none';
   else setTimeout(() => { const f = document.getElementById('new-request-fab'); if (f) f.style.display = fabTabs.includes(tab) ? 'flex' : 'none'; }, 100);
+  if (tab === 'dashboard') { renderDashboard(); }
   if (tab === 'tracker') { renderTracker(); }
   if (tab === 'active-projects') { renderActiveProjects(); }
   if (tab === 'insights') { populateInsightsFilters(); renderInsights(); }
@@ -6554,7 +6744,8 @@ async function init() {
     buildProjectTypeSelect();
     updateScore();
     renderSummaryMetrics();
-    showTab('tracker');
+    renderTracker();
+    showTab('dashboard');
   } catch(e) {
     console.error('[Arbiter] Init render error:', e);
   }
@@ -6772,7 +6963,7 @@ function closeConfigDrawer() {
 function showConfigTab(tab) {
   // Show the config panel as a full-page overlay
   // Hide all main tab panels
-  ['intake','tracker','active-projects','submitters','insights','weights','editor','help','settings','exec-config'].forEach(t => {
+  ['dashboard','intake','tracker','active-projects','submitters','insights','weights','editor','help','settings','exec-config'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.remove('active');
   });
@@ -6805,7 +6996,7 @@ function showNewRequest() {
   const existing = document.getElementById('config-back-bar');
   if (existing) existing.remove();
   // Show intake tab without it appearing in nav
-  ['tracker','active-projects','submitters','weights','editor','help','settings','exec-config'].forEach(t => {
+  ['dashboard','tracker','active-projects','submitters','weights','editor','help','settings','exec-config'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.remove('active');
   });

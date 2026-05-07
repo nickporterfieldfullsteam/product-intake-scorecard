@@ -1,5 +1,6 @@
 import { test, expect } from '../helpers/fixtures';
 import { seedProjects } from '../helpers/supabase';
+import { reloadAndWaitForInit } from '../helpers/auth';
 
 /**
  * Summary metrics math correctness (qa-2-14).
@@ -44,7 +45,7 @@ test.describe('Summary metrics math (qa-2-14)', () => {
     ]);
 
     // Hard reload so the app picks up the seeded projects from DB
-    await authedPage.reload();
+    await reloadAndWaitForInit(authedPage);
     await authedPage.locator('#tab-btn-tracker').click();
 
     // Wait for the summary-metrics container to render

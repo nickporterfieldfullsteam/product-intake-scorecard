@@ -1,6 +1,6 @@
 import { test, expect } from '../helpers/fixtures';
 import { countProjects } from '../helpers/supabase';
-import { openSettingsTab } from '../helpers/auth';
+import { openSettingsTab, reloadAndWaitForInit } from '../helpers/auth';
 
 /**
  * v1.9.4 regression test.
@@ -36,8 +36,9 @@ test.describe('v1.9.4 phantom score-delta regression', () => {
 
     // Hard reload — this is the critical step; the bug only manifested
     // after hydrating from the DB (null previous_score).
-    await authedPage.reload();
-    await expect(authedPage.locator('#tab-btn-tracker')).toBeVisible();
+    await reloadAndWaitForInit(authedPage);
+    await authedPage.locator('#tab-btn-tracker').click();
+    await expect(authedPage.locator('#tab-tracker')).toBeVisible();
 
     // Wait for at least one project row to render in the list view
     await expect.poll(

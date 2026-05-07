@@ -9,11 +9,15 @@ test.describe('Smoke', () => {
     await expect(footerBuild).toHaveText(/^v\d+\.\d+\.\d+(-[a-z0-9.]+)? · Build: /);
 
     // Core tabs present
+    await expect(authedPage.locator('#tab-btn-dashboard')).toBeVisible();
     await expect(authedPage.locator('#tab-btn-tracker')).toBeVisible();
     await expect(authedPage.locator('#tab-btn-active-projects')).toBeVisible();
     await expect(authedPage.locator('#tab-btn-submitters')).toBeVisible();
     await expect(authedPage.locator('#tab-btn-insights')).toBeVisible();
     await expect(authedPage.locator('#tab-btn-help')).toBeVisible();
+
+    // Dashboard is the default tab
+    await expect(authedPage.locator('#tab-dashboard')).toBeVisible();
 
     // FAB present
     await expect(authedPage.locator('#new-request-fab')).toBeVisible();

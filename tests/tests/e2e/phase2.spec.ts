@@ -1,7 +1,7 @@
 import { test, expect } from '../helpers/fixtures';
 import { countProjects, countDeletedProjects, getProjectByName, cleanTestWorkspace } from '../helpers/supabase';
 import { createProject, openNewRequest } from '../helpers/scorecard';
-import { signIn, openSettingsTab } from '../helpers/auth';
+import { signIn, openSettingsTab, reloadAndWaitForInit } from '../helpers/auth';
 
 test.describe('Phase 2 — Supabase persistence', () => {
   test('Test B: generate sample projects persists to Supabase', async ({ authedPage }) => {
@@ -18,7 +18,8 @@ test.describe('Phase 2 — Supabase persistence', () => {
     ).toBe(13);
 
     // Hard refresh → samples should still be there
-    await authedPage.reload();
+    await reloadAndWaitForInit(authedPage);
+    await authedPage.locator('#tab-btn-tracker').click();
     await expect(authedPage.locator('#projects-list')).toBeVisible();
     // Wait for projects to render in the tracker
     await expect.poll(

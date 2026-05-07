@@ -133,6 +133,14 @@ export type SeedProjectInput = {
   revisitDate?: string | null;
   /** ISO datetime to override created_at. Defaults to NOW(). */
   createdAt?: string;
+  /** Execution tracking fields (v1.17.0) */
+  executionSponsorGroup?: string | null;
+  executionPlatform?: string | null;
+  executionPriority?: string | null;
+  executionEta?: string | null;
+  executionLifecycle?: string | null;
+  executionStatus?: string | null;
+  executionOwners?: string[] | null;
 };
 
 /**
@@ -166,6 +174,13 @@ export async function seedProjects(projects: SeedProjectInput[]): Promise<any[]>
     revisit_date: p.revisitDate || null,
     is_sample: false,
     submitter_email: null,
+    execution_sponsor_group: p.executionSponsorGroup || null,
+    execution_platform: p.executionPlatform || null,
+    execution_priority: p.executionPriority || null,
+    execution_eta: p.executionEta || null,
+    execution_lifecycle: p.executionLifecycle || null,
+    execution_status: p.executionStatus || null,
+    execution_owners: p.executionOwners || null,
     ...(p.createdAt ? { created_at: p.createdAt } : {}),
   }));
   const { data, error } = await c.from('projects').insert(rows).select();

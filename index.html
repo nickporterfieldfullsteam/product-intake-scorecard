@@ -1567,7 +1567,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-06 08:34:44 PM EST';
+const BUILD_STAMP = '2026-05-06 08:53:25 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5859,8 +5859,8 @@ function renderDashboard() {
     return new Date(p.execution_eta + 'T00:00:00') < today;
   });
   const upcoming = allLive.filter(p => {
-    if (!p.revisit_date) return false;
-    const rd = new Date(p.revisit_date + 'T00:00:00');
+    if (!p.revisitDate) return false;
+    const rd = new Date(p.revisitDate + 'T00:00:00');
     return rd >= today && rd <= in14;
   });
 
@@ -5950,7 +5950,7 @@ function renderDashboard() {
       revisitEl.innerHTML = '<p style="font-size:13px;color:#aaa;font-style:italic;padding:8px 0;">No revisits in the next 14 days.</p>';
     } else {
       revisitEl.innerHTML = upcoming.map(p => {
-        const rd = new Date(p.revisit_date + 'T00:00:00');
+        const rd = new Date(p.revisitDate + 'T00:00:00');
         const daysUntil = Math.floor((rd.getTime() - today.getTime()) / 86400000);
         const rdLabel = daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : 'In ' + daysUntil + ' days';
         const rdDate = rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -5968,9 +5968,9 @@ function renderDashboard() {
 }
 
 function dashMetric(label, value, color) {
-  return `<div style="flex:1;min-width:120px;background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 16px;">
+  return `<div class="metric-card" style="flex:1;min-width:120px;background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 16px;">
     <div style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(label)}</div>
-    <div style="font-size:24px;font-weight:600;color:${color};margin-top:4px;">${value}</div>
+    <div class="metric-value" style="font-size:24px;font-weight:600;color:${color};margin-top:4px;">${value}</div>
   </div>`;
 }
 

@@ -862,9 +862,34 @@
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">Your home base. Every saved project lives here in either List or Board view. The summary cards at the top — Total, This month, Avg score, Acceptance rate, Overdue revisits — give you a quick read on the pipeline.</p>
+            <p style="margin:0 0 8px;">Your landing page — a PM operations view that surfaces what needs attention right now. Six metric cards at the top (Active projects, Unreviewed, At risk, Blocked, Overdue ETAs, Revisits) give you an instant read.</p>
+            <p style="margin:0 0 8px;">Below the metrics, four attention widgets show: <strong>Needs attention</strong> (blocked and at-risk projects), <strong>Unreviewed submissions</strong> (Submitted status, not yet touched), <strong>Overdue ETAs</strong> (accepted projects past their ETA date), and <strong>Upcoming revisits</strong> (deferred projects with a revisit date within 14 days).</p>
+            <p style="margin:0;">Click any row to jump to the relevant tab — Intake for submissions, Active Projects for execution items.</p>
+          </div>
+        </div>
+
+        <div class="help-topic">
+          <div class="help-topic-header" onclick="toggleHelp(this)">
+            <span class="help-topic-title">Intake</span>
+            <span class="help-topic-chevron">▾</span>
+          </div>
+          <div class="help-topic-body">
+            <p style="margin:0 0 8px;">The submission review queue. Every saved project lives here in either List or Board view. The summary cards at the top — Total, This month, Avg score, Acceptance rate, Overdue revisits — give you a quick read on the intake pipeline.</p>
             <p style="margin:0 0 8px;">Filter by status chip, type, tier, date, or rep. Search by project or customer name. Click a project to expand its details inline; from there you can change status, add decision notes, or set a revisit date.</p>
             <p style="margin:0;">Switch to <strong>Board</strong> to see projects laid out as a kanban grouped by status. Drag a card to a new column to change its status — the change persists.</p>
+          </div>
+        </div>
+
+        <div class="help-topic">
+          <div class="help-topic-header" onclick="toggleHelp(this)">
+            <span class="help-topic-title">Active Projects</span>
+            <span class="help-topic-chevron">▾</span>
+          </div>
+          <div class="help-topic-body">
+            <p style="margin:0 0 8px;">The execution pipeline — accepted projects that are being built. Shows only projects with <strong>Accepted</strong> intake status.</p>
+            <p style="margin:0 0 8px;">Each project row shows platform, priority, lifecycle stage, execution status, ETA, and assigned owners. Click a row to expand the detail panel where you can edit all execution fields and click <strong>Save changes</strong>.</p>
+            <p style="margin:0 0 8px;">Filter by platform, lifecycle, execution status, or owner. All values come from the configurable lists in <strong>⚙ → Active Projects config</strong>.</p>
+            <p style="margin:0;">Execution fields are separate from intake scoring — stakeholders can see execution status via the <strong>Shareable status board</strong> without ever seeing scores or tier classifications.</p>
           </div>
         </div>
 
@@ -876,7 +901,7 @@
           <div class="help-topic-body">
             <p style="margin:0 0 8px;">A request moves through statuses as the team works it: <strong>Submitted</strong> → <strong>Under Review</strong> → <strong>Accepted</strong>, <strong>Deferred</strong>, or <strong>Passed</strong>. <strong>Completed</strong> is the terminal state for accepted projects that have shipped.</p>
             <p style="margin:0 0 8px;">When you change a project's status — or add decision notes, or set a revisit date — and click <strong>Save</strong>, Arbiter automatically emails the original submitter. They see the new status, your notes, and any revisit date. They never see the score or tier (those are internal).</p>
-            <p style="margin:0;"><strong>Deferred</strong> projects benefit from a revisit date. The Dashboard's <strong>Overdue revisits</strong> card surfaces ones whose date has passed, so nothing slips out of mind.</p>
+            <p style="margin:0;"><strong>Deferred</strong> projects benefit from a revisit date. The Dashboard's <strong>Upcoming revisits</strong> widget surfaces ones approaching within 14 days, so nothing slips out of mind.</p>
           </div>
         </div>
 
@@ -886,8 +911,8 @@
             <span class="help-topic-chevron">▾</span>
           </div>
           <div class="help-topic-body">
-            <p style="margin:0 0 8px;">For times when you need to score a request yourself rather than wait for a rep to submit. Open the <strong>+</strong> button in the bottom-right of the Dashboard.</p>
-            <p style="margin:0;">Pick a project type, fill in the locked fields (project name, customer, submitter, etc.) and any custom detail fields, then answer each scoring criterion. The score and tier update live as you answer. Click <strong>Save</strong> to add it to the Dashboard.</p>
+            <p style="margin:0 0 8px;">For times when you need to score a request yourself rather than wait for a rep to submit. Open the <strong>+</strong> button in the bottom-right corner.</p>
+            <p style="margin:0;">Pick a project type, fill in the locked fields (project name, customer, submitter, etc.) and any custom detail fields, then answer each scoring criterion. The score and tier update live as you answer. Click <strong>Save</strong> to add it to the Intake list.</p>
           </div>
         </div>
 
@@ -923,7 +948,7 @@
           <div class="help-topic-body">
             <p style="margin:0 0 8px;">The list of authorized submitters for this workspace. Reps are people who can sign into the rep portal and submit requests; they can't see scoring, decisions, or anyone else's projects.</p>
             <p style="margin:0 0 8px;">Add a rep with their name and email. Use <strong>Copy portal link</strong> on a rep's card to generate a per-rep URL that pre-fills their email at sign-in. Use <strong>Deactivate</strong> to revoke access without losing their submission history.</p>
-            <p style="margin:0;">The filter chips group reps by status, and clicking a rep card filters the Dashboard to just their projects.</p>
+            <p style="margin:0;">The filter chips group reps by status, and clicking a rep card filters the Intake list to just their projects.</p>
           </div>
         </div>
 
@@ -936,6 +961,30 @@
             <p style="margin:0 0 8px;">Reps sign in at <strong>/arbiter/portal/</strong> with a magic link. They see only their own submissions, can submit new requests, and edit a submission while it's still in <strong>Submitted</strong> status.</p>
             <p style="margin:0 0 8px;">Reps never see scores, tiers, weights, or other reps' projects. Their dashboard shows status, decision notes, and revisit dates — the same things they get in their notification emails.</p>
             <p style="margin:0;">If you want to preview what a rep sees, sign out of the main app, open the portal URL, and sign in as a rep account.</p>
+          </div>
+        </div>
+
+        <div class="help-topic">
+          <div class="help-topic-header" onclick="toggleHelp(this)">
+            <span class="help-topic-title">Shareable status board</span>
+            <span class="help-topic-chevron">▾</span>
+          </div>
+          <div class="help-topic-body">
+            <p style="margin:0 0 8px;">A public read-only board at <strong>/arbiter/status/</strong> that stakeholders can bookmark. No login required — access is controlled by a token in the URL. Generate and manage the token in <strong>⚙ → Active Projects config → Shareable status board</strong>.</p>
+            <p style="margin:0 0 8px;">The board shows accepted projects grouped by lifecycle stage (Planning → Development → Testing → Releasing) with priority, execution status, ETA, and owner avatars. Stakeholders can filter by platform, status, or priority.</p>
+            <p style="margin:0;">No scoring data is shown — no scores, tiers, or criteria breakdowns. Regenerating the token invalidates the old link immediately.</p>
+          </div>
+        </div>
+
+        <div class="help-topic">
+          <div class="help-topic-header" onclick="toggleHelp(this)">
+            <span class="help-topic-title">Active Projects config</span>
+            <span class="help-topic-chevron">▾</span>
+          </div>
+          <div class="help-topic-body">
+            <p style="margin:0 0 8px;">Open from <strong>⚙ → Active Projects config</strong>. Manage the dropdown values available when tracking accepted projects: sponsor groups, platforms, priority levels, lifecycle stages, execution statuses, and the people directory (owners).</p>
+            <p style="margin:0 0 8px;">Each value has a color swatch — click it to pick from a preset palette. The color is used for pills throughout the app and the status board.</p>
+            <p style="margin:0;">Renaming a value automatically updates all projects using it. Deleting a value that's in use prompts you to reassign those projects to a different value first.</p>
           </div>
         </div>
 
@@ -992,7 +1041,7 @@
         <div class="help-topic">
           <div class="help-topic-header" onclick="toggleHelp(this)">
             <span class="help-topic-title">QA checklist</span>
-            <span style="font-size:12px;color:#888;margin-right:8px;" id="qa-progress-label">0 / 112 complete</span>
+            <span style="font-size:12px;color:#888;margin-right:8px;" id="qa-progress-label">0 / 129 complete</span>
             <span class="help-topic-chevron">&#9662;</span>
           </div>
           <div class="help-topic-body">
@@ -1038,10 +1087,6 @@
               </label>
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
                 <input type="checkbox" id="qa-0-11" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
-                Rep links — generate link pre-fills and locks name/email on the portal submission form
-              </label>
-              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
-                <input type="checkbox" id="qa-0-12" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
                 Generate sample projects adds 10 realistic entries across all statuses
               </label>
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
@@ -1101,7 +1146,7 @@
               </label>
             </div>
             <div style="margin-bottom:1rem;">
-              <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Dashboard</p>
+              <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Intake</p>
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
                 <input type="checkbox" id="qa-2-0" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
                 Status filter bar shows all statuses with correct counts
@@ -1173,6 +1218,84 @@
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
                 <input type="checkbox" id="qa-2-22" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
                 Delete project shows inline confirm, then removes on second click
+              </label>
+            </div>
+            <div style="margin-bottom:1rem;">
+              <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Dashboard</p>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-0" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Dashboard is the default tab after sign-in
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-1" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Six metric cards render with correct counts
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-2" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Needs attention shows blocked and at-risk projects
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-3" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Unreviewed submissions shows only Submitted projects
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-4" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Overdue ETAs shows accepted projects with past ETA
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-5" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Upcoming revisits shows deferred projects within 14-day window
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-6" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Clicking rows navigates to the correct tab (Intake or Active Projects)
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-11-7" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Empty state shows appropriate messages in all widgets
+              </label>
+            </div>
+            <div style="margin-bottom:1rem;">
+              <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Active Projects</p>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-0" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Active Projects tab shows only Accepted projects
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-1" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Execution fields (sponsor group, platform, priority, lifecycle, status, ETA, owners) save on Save changes
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-2" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Owner chips add/remove without clearing other unsaved fields
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-3" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Row pills update after saving
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-4" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Filters (platform, lifecycle, status, owner) narrow the list correctly
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-5" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Config lists (⚙ → Active Projects config) — add, rename, delete with reassignment all work
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-6" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Color palette picker updates pill colors throughout the app
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-7" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Shareable status board — token generation, copy link, regenerate with confirmation
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-8" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Status board page renders with valid token, shows error with invalid/missing token
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
+                <input type="checkbox" id="qa-12-9" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
+                Status board shows no scores, tiers, or criteria — only execution fields
               </label>
             </div>
             <div style="margin-bottom:1rem;">
@@ -1262,7 +1385,7 @@
               </label>
             </div>
             <div style="margin-bottom:1rem;">
-              <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Dashboard &amp; board view</p>
+              <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Intake — board view</p>
               <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 0;color:#444;line-height:1.5;">
                 <input type="checkbox" id="qa-9-0" onchange="saveQA()" style="width:auto;accent-color:#1a1a1a;margin-top:2px;flex-shrink:0;">
                 List/Board toggle switches views correctly
@@ -1567,7 +1690,7 @@
 
 <script>
 const VERSION = '1.17.0-alpha';
-const BUILD_STAMP = '2026-05-08 11:15:58 AM EST';
+const BUILD_STAMP = '2026-05-08 07:27:49 PM EST';
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -4945,7 +5068,7 @@ function confirmCancelEdit() {
   // Show a confirmation before discarding in-progress edits.
   // Native confirm() is fine here: blocking modal, keyboard accessible,
   // no dependency on the app's custom modal system.
-  const proceed = window.confirm('Discard changes and return to the Dashboard?');
+  const proceed = window.confirm('Discard changes and return to the Intake list?');
   if (!proceed) return;
   cancelEdit();
   showTab('tracker');
@@ -6575,7 +6698,7 @@ function runAutoQA() {
   check('qa-1-7', 'Edit & re-score function exists', () => typeof editProject === 'function');
   check('qa-1-8', 'prefillCriteria function exists', () => typeof prefillCriteria === 'function');
 
-  // ── Dashboard (qa-2-x)
+  // ── Intake (qa-2-x)
   check('qa-2-0', 'Status filter bar rendered', () => !!document.getElementById('status-filter-bar'));
   check('qa-2-1', 'Status filter function exists', () => typeof setStatusFilter === 'function' || typeof buildStatusFilterBar === 'function');
   check('qa-2-2', 'Projects list container exists', () => !!document.getElementById('projects-list'));
@@ -7067,8 +7190,8 @@ const TOUR_STEPS = [
   {
     tab: 'tracker',
     target: '#tab-tracker',
-    title: 'Dashboard',
-    body: 'This is your home base. Every scored request lives here in List or Board view. Use the summary metrics, status filters, and filters bar to zero in on what needs attention.'
+    title: 'Intake',
+    body: 'The submission review queue. Every scored request lives here in List or Board view. Use the summary metrics, status filters, and filters bar to zero in on what needs attention.'
   },
   {
     tab: 'tracker',
@@ -7080,7 +7203,7 @@ const TOUR_STEPS = [
     tab: 'submitters',
     target: '#tab-submitters',
     title: 'Reps',
-    body: 'Manage who can submit through the rep portal. Add, deactivate, or copy a per-rep portal link. Click any rep card to filter the Dashboard to just their projects.'
+    body: 'Manage who can submit through the rep portal. Add, deactivate, or copy a per-rep portal link. Click any rep card to filter the Intake list to just their projects.'
   },
   {
     tab: 'help',

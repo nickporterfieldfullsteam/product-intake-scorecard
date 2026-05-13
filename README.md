@@ -6,7 +6,7 @@ Reps submit through a portal; admins and PMs review, score, decide, and notify b
 Live admin app: <https://nickporterfieldfullsteam.github.io/arbiter/>
 Live rep portal: <https://nickporterfieldfullsteam.github.io/arbiter/portal/>
 
-Currently: main app v1.17.0-alpha, portal v0.6.0.
+Currently: main app v1.17.0, portal v0.6.0.
 
 ---
 

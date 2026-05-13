@@ -721,9 +721,18 @@ function parseRepToken() {
   try {
     const params = new URLSearchParams(window.location.search);
     const r = params.get('r');
-    if (!r) return null;
-    const data = JSON.parse(atob(r));
-    return (data && typeof data === 'object') ? data : null;
+    if (r) {
+      const data = JSON.parse(atob(r));
+      if (data && typeof data === 'object') {
+        // Cache in localStorage so the name survives magic-link redirect
+        if (data.name) localStorage.setItem('arbiter_rep_name', data.name);
+        return data;
+      }
+    }
+    // Fallback: retrieve cached name if ?r= was stripped by redirect
+    const cached = localStorage.getItem('arbiter_rep_name');
+    if (cached) return { name: cached };
+    return null;
   } catch {
     return null;
   }
@@ -759,7 +768,7 @@ async function sendMagicLink() {
   clearStatus();
 
   try {
-    const redirectTo = window.location.origin + window.location.pathname;
+    const redirectTo = window.location.origin + window.location.pathname + window.location.search;
     // Check rep authorization BEFORE sending the OTP. Non-reps get the
     // same "Check your email" UX, but no email is sent and no session is
     // ever created for them. We intentionally don't surface the check's
@@ -927,10 +936,24 @@ function buildDetailFields() {
     }
   }
 
+  // Pre-fill submitter name: try ?r= token first, then localStorage cache,
+  // then look up the rep's name from the DB by email
   const rep = parseRepToken();
-  if (rep?.name) {
-    const nameEl = document.getElementById('df-__submitter__');
-    if (nameEl && !nameEl.value) nameEl.value = rep.name;
+  const nameEl = document.getElementById('df-__submitter__');
+  if (rep?.name && nameEl && !nameEl.value) {
+    nameEl.value = rep.name;
+  } else if (nameEl && !nameEl.value && currentUser?.email && currentSession?.access_token) {
+    // Async lookup — fill when it resolves
+    fetch(SUPABASE_URL + '/rest/v1/reps?email=eq.' + encodeURIComponent(currentUser.email.toLowerCase()) + '&select=name&limit=1', {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + currentSession.access_token,
+      }
+    }).then(r => r.json()).then(rows => {
+      if (rows?.[0]?.name && nameEl && !nameEl.value) {
+        nameEl.value = rows[0].name;
+      }
+    }).catch(() => {});
   }
 }
 

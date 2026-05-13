@@ -7188,16 +7188,28 @@ function toggleHelp(header) {
 /* ── TOUR ── */
 const TOUR_STEPS = [
   {
+    tab: 'dashboard',
+    target: '#tab-dashboard',
+    title: 'Dashboard',
+    body: 'Your landing page. Six metric cards and four attention widgets show what needs your focus right now — blocked projects, unreviewed submissions, overdue ETAs, and upcoming revisits.'
+  },
+  {
     tab: 'tracker',
     target: '#tab-tracker',
     title: 'Intake',
-    body: 'The submission review queue. Every scored request lives here in List or Board view. Use the summary metrics, status filters, and filters bar to zero in on what needs attention.'
+    body: 'The submission review queue. Every scored request lives here in List or Board view. Use the summary metrics, status filters, and search to zero in on what needs attention. Drag cards in Board view to change status.'
+  },
+  {
+    tab: 'active-projects',
+    target: '#tab-active-projects',
+    title: 'Active Projects',
+    body: 'The execution pipeline. Once a project is Accepted, track it here with sponsor group, platform, priority, lifecycle stage, execution status, ETA, and owners. Click any row to expand and edit.'
   },
   {
     tab: 'tracker',
     target: '#new-request-fab',
     title: 'New request',
-    body: 'Use the + button in the bottom-right to score a request yourself. Most requests come in via the rep portal, but this is here for the times you need to add one directly.'
+    body: 'Use the + button to score a request yourself. Pick a project type, fill in the details, answer the criteria — the score updates live. Most requests come in via the rep portal, but this is here when you need to add one directly.'
   },
   {
     tab: 'submitters',
@@ -7206,10 +7218,34 @@ const TOUR_STEPS = [
     body: 'Manage who can submit through the rep portal. Add, deactivate, or copy a per-rep portal link. Click any rep card to filter the Intake list to just their projects.'
   },
   {
+    tab: 'settings',
+    target: '#tab-settings',
+    title: 'Settings',
+    body: 'Manage workspace members, generate sample data, import/export backups, and sign out. Open via ⚙ → Settings.'
+  },
+  {
+    tab: 'weights',
+    target: '#tab-weights',
+    title: 'Scoring weights & thresholds',
+    body: 'Control how criteria are weighted. Save custom presets for different scenarios. Tier thresholds (Pursue / Evaluate / Defer / Pass) are set here too — they determine how scores translate into recommendations.'
+  },
+  {
+    tab: 'editor',
+    target: '#tab-editor',
+    title: 'Edit criteria & detail fields',
+    body: 'Add, rename, reorder, or remove scoring criteria and their options. Below that, manage detail fields — the extra inputs (text, select, number, date, textarea) that appear on the submission form.'
+  },
+  {
+    tab: 'exec-config',
+    target: '#tab-exec-config',
+    title: 'Active Projects config',
+    body: 'Configure the dropdown values for execution tracking: sponsor groups, platforms, priorities, lifecycle stages, statuses, and the people directory. Each item gets a color from a preset palette. The shareable status board token lives here too.'
+  },
+  {
     tab: 'help',
     target: '#tab-help',
-    title: 'Configure & help',
-    body: "Use the ⚙ gear icon in the top-right to access Scoring weights, Edit criteria, and Settings. The Help tab has reference docs for every feature.",
+    title: 'Help & QA',
+    body: 'Reference docs for every feature, plus a built-in QA checklist you can work through to verify everything is set up correctly. Click any topic to expand it.',
     last: true
   }
 ];

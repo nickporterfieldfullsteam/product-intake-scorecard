@@ -8,7 +8,8 @@ cat > "$HOOK" << 'HOOKEOF'
 #!/bin/sh
 STAMP=$(TZ='America/New_York' date '+%Y-%m-%d %I:%M:%S %p EST')
 sed -i '' "s/const BUILD_STAMP = '.*'/const BUILD_STAMP = '$STAMP'/" index.html
-git add index.html
+sed -i '' "s/const BUILD_STAMP = '.*'/const BUILD_STAMP = '$STAMP'/" portal/index.html
+git add index.html portal/index.html
 HOOKEOF
 
 chmod +x "$HOOK"

@@ -310,7 +310,7 @@
  * ============================================================ */
 
 const VERSION = '0.6.1';
-const BUILD_STAMP = '2026-05-13 05:16:08 PM EST';
+const BUILD_STAMP = '2026-05-13 10:09:03 PM EST';
 
 const SUPABASE_URL = 'https://evjvdfqpsbnpfsmzhpfn.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_8qsrZAPt5oesXlSNBTJjpA_YjY8OqTk';
@@ -672,6 +672,7 @@ function showFormView() {
   setFormMode('new');
   showSubView('form');
   clearFormStatus();
+  prefillRepName();
   window.scrollTo(0, 0);
 }
 
@@ -940,22 +941,36 @@ function buildDetailFields() {
   // then look up the rep's name from the DB by email.
   // Skip during edit mode — populateFormForEdit will set the values.
   if (formMode !== 'edit') {
-    const rep = parseRepToken();
-    const nameEl = document.getElementById('df-__submitter__');
-    if (rep?.name && nameEl && !nameEl.value) {
-      nameEl.value = rep.name;
-    } else if (nameEl && !nameEl.value && currentUser?.email && currentSession?.access_token) {
-      fetch(SUPABASE_URL + '/rest/v1/reps?email=eq.' + encodeURIComponent(currentUser.email.toLowerCase()) + '&select=name&limit=1', {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + currentSession.access_token,
-        }
-      }).then(r => r.json()).then(rows => {
-        if (rows?.[0]?.name && nameEl && !nameEl.value) {
-          nameEl.value = rows[0].name;
-        }
-      }).catch(() => {});
-    }
+    prefillRepName();
+  }
+}
+
+/**
+ * Pre-fill the submitter name field from the ?r= token, localStorage cache,
+ * or a DB lookup by email. Called on initial form build and when opening
+ * a new submission (after resetFormFields clears the field).
+ */
+function prefillRepName() {
+  const nameEl = document.getElementById('df-__submitter__');
+  if (!nameEl) return;
+  // If already filled and locked, nothing to do
+  if (nameEl.value && nameEl.readOnly) return;
+  const rep = parseRepToken();
+  if (rep?.name) {
+    nameEl.value = rep.name;
+    nameEl.readOnly = true;
+  } else if (currentUser?.email && currentSession?.access_token) {
+    fetch(SUPABASE_URL + '/rest/v1/reps?email=eq.' + encodeURIComponent(currentUser.email.toLowerCase()) + '&select=name&limit=1', {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + currentSession.access_token,
+      }
+    }).then(r => r.json()).then(rows => {
+      if (rows?.[0]?.name && nameEl) {
+        nameEl.value = rows[0].name;
+        nameEl.readOnly = true;
+      }
+    }).catch(() => {});
   }
 }
 
@@ -1177,6 +1192,7 @@ function resetFormFields() {
     const el = document.getElementById('df-' + f.id);
     if (!el) return;
     if (f.id === '__email__') return;
+    if (el.readOnly) return;
     el.value = '';
   });
   (workspaceConfig?.detail_fields || []).forEach(f => {

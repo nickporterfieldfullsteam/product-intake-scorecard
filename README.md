@@ -6,7 +6,7 @@ Reps submit through a portal; admins and PMs review, score, decide, and notify b
 Live admin app: <https://nickporterfieldfullsteam.github.io/arbiter/>
 Live rep portal: <https://nickporterfieldfullsteam.github.io/arbiter/portal/>
 
-Currently: main app v1.17.0, portal v0.6.0.
+Currently: main app v1.17.0, portal v0.6.1.
 
 ---
 
@@ -29,6 +29,11 @@ A short orienting note for future readers; full history in `git log`.
   attention widgets (needs attention, unreviewed, overdue ETAs, upcoming
   revisits). Help tab and Take a Tour (10 steps) fully updated. 91
   Playwright tests covering all new features.
+* **Portal v0.6.1 — rep name pre-fill.** Portal now pre-fills and locks
+  the "Submitted by" name field (readOnly) the same way it handles the
+  email field. Three-layer lookup: `?r=` token → localStorage cache → DB
+  fetch from `reps` table by email. `redirectTo` in OTP flow now preserves
+  the `?r=` query parameter so the token survives the magic-link redirect.
 
 * **v1.16.0 — Pending-invite flow.** An admin can now invite a member by
   email even if that person doesn't have an auth account yet. The
@@ -323,6 +328,16 @@ git push origin main
 
 GitHub Pages serves the repo root. Push to `main`, wait ~60s, hard-refresh.
 
+**After a fresh clone**, install the pre-commit hook that auto-stamps the build
+timestamp on every commit:
+
+```
+./scripts/install-hooks.sh
+```
+
+Without this, `BUILD_STAMP` in the footer won't update. The hook uses
+`TZ='America/New_York'` for EST formatting.
+
 ### Edge Function
 
 ```
@@ -415,6 +430,20 @@ time.
   other form fields or save to DB. Owners are persisted alongside all other execution
   fields when the Save button is clicked. This was a bug fix: the original approach
   re-rendered the entire execution section on owner change, clearing unsaved dropdowns.
+* **Portal submitter name pre-fill has three layers.** `prefillRepName()` tries (1) the
+  `?r=` token's `name` field, (2) `localStorage.getItem('arbiter_rep_name')` cache,
+  (3) async DB fetch from the `reps` table by the signed-in user's email. The name
+  field is set `readOnly` after filling, matching the email field behavior.
+  `resetFormFields` skips clearing readOnly fields. `showFormView` calls
+  `prefillRepName` AFTER `showSubView('form')` — calling it before caused the form
+  to stay hidden in tests where the fetch threw. The portal uses
+  `SUPABASE_PUBLISHABLE_KEY` (not `SUPABASE_KEY`) — the main app and portal use
+  different constant names for the same value.
+* **`.env.test` is gitignored and must be recreated after a fresh clone.** It contains
+  Supabase credentials, test user/rep email+password, and the test workspace ID.
+  Without it, every test fails with `TEST_WORKSPACE_ID must be set`. The pre-commit
+  hook (`./scripts/install-hooks.sh`) must also be run after clone. CI gets these
+  values from GitHub Actions secrets.
 * **Removing JS that touches a JSONB column? Plan to drop the column too.** When
   `salesHelpTopics` was removed from `index.html` in v1.15.3, the
   `workspace_config.sales_help_topics` JSONB column was left in place
